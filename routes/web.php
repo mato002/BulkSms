@@ -28,6 +28,11 @@ use App\Http\Controllers\AdminController;
 |
 */
 
+// Public API Documentation (no authentication required)
+Route::get('/api-documentation', function() {
+    return view('api-documentation');
+})->name('api.documentation');
+
 // Public Reply Routes (no authentication required)
 Route::get('/reply/{token}', [PublicReplyController::class, 'showReplyForm'])->name('public.reply.form');
 Route::post('/reply/{token}', [PublicReplyController::class, 'submitReply'])->name('public.reply.submit');

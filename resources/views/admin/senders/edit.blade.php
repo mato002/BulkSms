@@ -25,13 +25,14 @@
                         <h5 class="mb-3">Sender Information</h5>
                         
                         <div class="mb-3">
-                            <label for="name" class="form-label">Sender Name <span class="text-danger">*</span></label>
+                            <label for="name" class="form-label">Company Name <span class="text-danger">*</span></label>
                             <input type="text" 
                                    name="name" 
                                    id="name" 
                                    value="{{ old('name', $client->name) }}"
                                    required
                                    class="form-control @error('name') is-invalid @enderror">
+                            <div class="form-text">This will be used as the sender's display name</div>
                             @error('name')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror

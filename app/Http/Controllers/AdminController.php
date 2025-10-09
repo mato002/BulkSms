@@ -7,10 +7,12 @@ use App\Models\User;
 use App\Models\Message;
 use App\Models\Campaign;
 use App\Services\OnfonWalletService;
+use App\Mail\WelcomeSenderMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class AdminController extends Controller
 {
@@ -123,6 +125,18 @@ class AdminController extends Controller
                 'password' => Hash::make($request->user_password),
                 'client_id' => $client->id,
                 'role' => 'user',
+            ]);
+        }
+
+        // Send welcome email
+        try {
+            if ($client->contact && filter_var($client->contact, FILTER_VALIDATE_EMAIL)) {
+                Mail::to($client->contact)->send(new WelcomeSenderMail($client));
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send welcome email', [
+                'client_id' => $client->id,
+                'error' => $e->getMessage()
             ]);
         }
 

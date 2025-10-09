@@ -67,5 +67,6 @@ class Kernel extends HttpKernel
         'api.auth' => \App\Http\Middleware\ApiAuth::class,
         'company.auth' => \App\Http\Middleware\CompanyAuth::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        'tier.rate.limit' => \App\Http\Middleware\TierBasedRateLimit::class,
     ];
 }

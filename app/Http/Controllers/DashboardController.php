@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Support\Facades\DB;
 use App\Models\Campaign;
+use App\Models\Client;
+use App\Models\Channel;
+use App\Services\OnfonWalletService;
 
 class DashboardController extends Controller
 {
@@ -11,6 +14,10 @@ class DashboardController extends Controller
     {
         // Get client from session or default to 1
         $clientId = session('client_id', 1);
+        $isAdmin = auth()->user() && auth()->user()->isAdmin();
+
+        // Get current client info
+        $currentClient = Client::find($clientId);
 
         // Basic stats
         $stats = [
@@ -39,6 +46,25 @@ class DashboardController extends Controller
         $stats['total_cost'] = DB::table('messages')
             ->where('client_id', $clientId)
             ->sum('cost');
+
+        // Wallet & Balance info
+        $stats['local_balance'] = $currentClient ? $currentClient->balance : 0;
+        $stats['balance_units'] = $currentClient ? $currentClient->getBalanceInUnits() : 0;
+        $stats['onfon_balance'] = $currentClient ? $currentClient->onfon_balance : 0;
+        $stats['price_per_unit'] = $currentClient ? $currentClient->price_per_unit : 0;
+
+        // Admin stats (if admin)
+        if ($isAdmin) {
+            $stats['total_clients'] = Client::count();
+            $stats['active_clients'] = Client::where('status', true)->count();
+            $stats['total_users'] = DB::table('users')->count();
+            $stats['total_channels'] = Channel::count();
+        }
+
+        // Messages by channel (including WhatsApp)
+        $stats['sms_count'] = DB::table('messages')->where('client_id', $clientId)->where('channel', 'sms')->count();
+        $stats['whatsapp_count'] = DB::table('messages')->where('client_id', $clientId)->where('channel', 'whatsapp')->count();
+        $stats['email_count'] = DB::table('messages')->where('client_id', $clientId)->where('channel', 'email')->count();
 
         // Messages by channel
         $messagesByChannel = DB::table('messages')
@@ -108,7 +134,9 @@ class DashboardController extends Controller
             'recentCampaigns',
             'recentActivity',
             'channelPerformance',
-            'nextScheduledCampaign'
+            'nextScheduledCampaign',
+            'currentClient',
+            'isAdmin'
         ));
     }
 

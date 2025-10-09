@@ -33,7 +33,7 @@ Route::get('/health', function () {
 Route::middleware(['api.auth'])->group(function () {
     
     // Company-specific routes
-    Route::prefix('{company_id}')->middleware(['company.auth'])->group(function () {
+    Route::prefix('{company_id}')->middleware(['company.auth', 'tier.rate.limit'])->group(function () {
         
         // SMS endpoints
         Route::prefix('sms')->group(function () {
@@ -72,13 +72,27 @@ Route::middleware(['api.auth'])->group(function () {
             Route::get('/statistics', [ClientController::class, 'statistics']);
         });
 
+        // Analytics endpoints
+        Route::prefix('analytics')->group(function () {
+            Route::get('/summary', [\App\Http\Controllers\Api\AnalyticsController::class, 'summary']);
+            Route::get('/daily', [\App\Http\Controllers\Api\AnalyticsController::class, 'daily']);
+            Route::get('/monthly', [\App\Http\Controllers\Api\AnalyticsController::class, 'monthly']);
+            Route::get('/by-channel', [\App\Http\Controllers\Api\AnalyticsController::class, 'byChannel']);
+            Route::get('/wallet', [\App\Http\Controllers\Api\AnalyticsController::class, 'wallet']);
+        });
+
         // Wallet endpoints (Onfon integration)
         Route::prefix('wallet')->group(function () {
             Route::get('/balance', [\App\Http\Controllers\Api\WalletController::class, 'balance']);
             Route::post('/sync', [\App\Http\Controllers\Api\WalletController::class, 'sync']);
             Route::post('/test-connection', [\App\Http\Controllers\Api\WalletController::class, 'testConnection']);
-            Route::get('/transactions', [\App\Http\Controllers\Api\WalletController::class, 'transactions']);
-            Route::post('/check-sufficient', [\App\Http\Controllers\Api\WalletController::class, 'checkSufficient']);
+            Route::get('/transactions', [\App\Http\Controllers\Api\TopupController::class, 'getTransactions']);
+            Route::get('/transactions/export', [\App\Http\Controllers\Api\TopupController::class, 'exportTransactionsCSV']);
+            Route::post('/check-sufficient', [\App\Http\Controllers\Api\TopupController::class, 'checkSufficientBalance']);
+            
+            // Top-up endpoints
+            Route::post('/topup', [\App\Http\Controllers\Api\TopupController::class, 'initiateTopup']);
+            Route::get('/topup/{transaction_id}', [\App\Http\Controllers\Api\TopupController::class, 'checkTopupStatus']);
         });
     });
 });
@@ -88,6 +102,10 @@ Route::post('/webhooks/onfon/inbound', [WebhookController::class, 'onfonInbound'
 Route::post('/webhooks/onfon/dlr', [WebhookController::class, 'onfonDlr']); // Delivery reports
 Route::post('/webhooks/whatsapp', [WebhookController::class, 'whatsappWebhook']);
 Route::post('/webhooks/email', [WebhookController::class, 'emailWebhook']);
+
+// M-Pesa Webhooks
+Route::post('/webhooks/mpesa/callback', [\App\Http\Controllers\MpesaWebhookController::class, 'callback']);
+Route::post('/webhooks/mpesa/timeout', [\App\Http\Controllers\MpesaWebhookController::class, 'timeout']);
 
 // Local test route (no auth) to validate send flow quickly
 if (app()->environment('local')) {

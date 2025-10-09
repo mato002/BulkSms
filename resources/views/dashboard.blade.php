@@ -72,6 +72,131 @@
         </div>
     </div>
 
+    <!-- Wallet & Balance Cards (if client has balance tracking) -->
+    @if($currentClient && $currentClient->balance !== null)
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="stat-card stat-card-success">
+                <div class="stat-icon">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Local Balance</div>
+                    <div class="stat-value">KSh {{ number_format($stats['local_balance'], 2) }}</div>
+                    <div class="stat-footer">
+                        <span class="text-muted">{{ number_format($stats['balance_units'], 2) }} units</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if($currentClient->onfon_balance !== null)
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="stat-card stat-card-info">
+                <div class="stat-icon">
+                    <i class="bi bi-credit-card"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Onfon Balance</div>
+                    <div class="stat-value">KSh {{ number_format($stats['onfon_balance'], 2) }}</div>
+                    <div class="stat-footer">
+                        <span class="text-muted">Last sync: {{ $currentClient->onfon_last_sync ? $currentClient->onfon_last_sync->diffForHumans() : 'Never' }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="stat-card stat-card-primary">
+                <div class="stat-icon">
+                    <i class="bi bi-tag"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Price Per Unit</div>
+                    <div class="stat-value">KSh {{ number_format($stats['price_per_unit'], 2) }}</div>
+                    <div class="stat-footer">
+                        <span class="text-muted">Per SMS unit</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="stat-card stat-card-warning">
+                <div class="stat-icon">
+                    <i class="bi bi-receipt"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-label">Total Spent</div>
+                    <div class="stat-value">KSh {{ number_format($stats['total_cost'], 2) }}</div>
+                    <div class="stat-footer">
+                        <span class="text-muted">All time</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Admin Stats (Only for Admins) -->
+    @if($isAdmin)
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="dashboard-card">
+                <div class="card-header-custom d-flex justify-content-between align-items-center">
+                    <h5 class="card-title-custom mb-0">
+                        <i class="bi bi-shield-check me-2"></i>Admin Overview
+                    </h5>
+                    <a href="{{ route('admin.senders.index') }}" class="btn btn-sm btn-outline-primary">
+                        Manage Senders <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6 col-md-3 mb-3 mb-md-0">
+                            <div class="admin-stat">
+                                <div class="admin-stat-icon bg-primary-subtle">
+                                    <i class="bi bi-building text-primary"></i>
+                                </div>
+                                <div class="admin-stat-value">{{ number_format($stats['total_clients']) }}</div>
+                                <div class="admin-stat-label">Total Clients</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3 mb-3 mb-md-0">
+                            <div class="admin-stat">
+                                <div class="admin-stat-icon bg-success-subtle">
+                                    <i class="bi bi-check-circle text-success"></i>
+                                </div>
+                                <div class="admin-stat-value">{{ number_format($stats['active_clients']) }}</div>
+                                <div class="admin-stat-label">Active Clients</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="admin-stat">
+                                <div class="admin-stat-icon bg-info-subtle">
+                                    <i class="bi bi-people text-info"></i>
+                                </div>
+                                <div class="admin-stat-value">{{ number_format($stats['total_users']) }}</div>
+                                <div class="admin-stat-label">Total Users</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="admin-stat">
+                                <div class="admin-stat-icon bg-warning-subtle">
+                                    <i class="bi bi-broadcast text-warning"></i>
+                                </div>
+                                <div class="admin-stat-value">{{ number_format($stats['total_channels']) }}</div>
+                                <div class="admin-stat-label">Total Channels</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Stats Cards -->
     <div class="row g-3 mb-4">
         <div class="col-12 col-sm-6 col-xl-3">
@@ -136,7 +261,67 @@
         </div>
     </div>
 
+    <!-- Channel Breakdown -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="dashboard-card">
+                <div class="card-header-custom">
+                    <h5 class="card-title-custom mb-0">
+                        <i class="bi bi-broadcast me-2"></i>Messages by Channel
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-4">
+                            <div class="channel-card channel-sms">
+                                <div class="channel-card-icon">
+                                    <i class="bi bi-phone-fill"></i>
+                                </div>
+                                <div class="channel-card-content">
+                                    <div class="channel-card-label">SMS Messages</div>
+                                    <div class="channel-card-value">{{ number_format($stats['sms_count']) }}</div>
+                                    <div class="channel-card-footer">
+                                        {{ $stats['total_messages'] > 0 ? round(($stats['sms_count'] / $stats['total_messages']) * 100, 1) : 0 }}% of total
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="channel-card channel-whatsapp">
+                                <div class="channel-card-icon">
+                                    <i class="bi bi-whatsapp"></i>
+                                </div>
+                                <div class="channel-card-content">
+                                    <div class="channel-card-label">WhatsApp Messages</div>
+                                    <div class="channel-card-value">{{ number_format($stats['whatsapp_count']) }}</div>
+                                    <div class="channel-card-footer">
+                                        {{ $stats['total_messages'] > 0 ? round(($stats['whatsapp_count'] / $stats['total_messages']) * 100, 1) : 0 }}% of total
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="channel-card channel-email">
+                                <div class="channel-card-icon">
+                                    <i class="bi bi-envelope-fill"></i>
+                                </div>
+                                <div class="channel-card-content">
+                                    <div class="channel-card-label">Email Messages</div>
+                                    <div class="channel-card-value">{{ number_format($stats['email_count']) }}</div>
+                                    <div class="channel-card-footer">
+                                        {{ $stats['total_messages'] > 0 ? round(($stats['email_count'] / $stats['total_messages']) * 100, 1) : 0 }}% of total
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Security Monitoring -->
+    @if($isAdmin)
     <div class="row g-3 mb-4">
         <div class="col-12">
             <div class="dashboard-card">
@@ -172,6 +357,7 @@
             </div>
         </div>
     </div>
+    @endif
 
     <!-- Charts Row -->
     <div class="row g-3 mb-4">
@@ -264,16 +450,27 @@
                             </a>
                         </div>
                     </div>
-                    <div class="quick-stat-item mb-0">
+                    <div class="quick-stat-item">
                         <div class="d-flex align-items-center">
                             <div class="quick-stat-icon bg-info-subtle">
-                                <i class="bi bi-currency-dollar text-info"></i>
+                                <i class="bi bi-phone text-info"></i>
                             </div>
                             <div class="flex-grow-1 ms-3">
-                                <div class="quick-stat-label">Total Cost</div>
-                                <div class="quick-stat-value">${{ number_format($stats['total_cost'], 2) }}</div>
+                                <div class="quick-stat-label">SMS Sent</div>
+                                <div class="quick-stat-value">{{ number_format($stats['sms_count']) }}</div>
                             </div>
-                            <a href="{{ route('analytics.index') }}" class="btn btn-sm btn-link">
+                        </div>
+                    </div>
+                    <div class="quick-stat-item mb-0">
+                        <div class="d-flex align-items-center">
+                            <div class="quick-stat-icon bg-success-subtle" style="background: rgba(37, 211, 102, 0.1) !important;">
+                                <i class="bi bi-whatsapp" style="color: #25D366;"></i>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="quick-stat-label">WhatsApp Sent</div>
+                                <div class="quick-stat-value">{{ number_format($stats['whatsapp_count']) }}</div>
+                            </div>
+                            <a href="{{ route('whatsapp.index') }}" class="btn btn-sm btn-link">
                                 <i class="bi bi-arrow-right"></i>
                             </a>
                         </div>
@@ -483,6 +680,11 @@
 
     .stat-card-danger .stat-icon {
         background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+
+    .stat-card-info .stat-icon {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         color: white;
     }
 
@@ -738,6 +940,115 @@
 
     .progress-text {
         font-weight: 600;
+    }
+
+    /* Admin Stats */
+    .admin-stat {
+        text-align: center;
+    }
+
+    .admin-stat-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        margin: 0 auto 1rem;
+    }
+
+    .admin-stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.25rem;
+    }
+
+    .admin-stat-label {
+        font-size: 0.875rem;
+        color: #64748b;
+    }
+
+    /* Channel Cards */
+    .channel-card {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        border: 2px solid transparent;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.2s;
+        height: 100%;
+    }
+
+    .channel-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .channel-sms {
+        border-color: #3b82f6;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.02) 100%);
+    }
+
+    .channel-whatsapp {
+        border-color: #25D366;
+        background: linear-gradient(135deg, rgba(37, 211, 102, 0.05) 0%, rgba(37, 211, 102, 0.02) 100%);
+    }
+
+    .channel-email {
+        border-color: #f59e0b;
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, rgba(245, 158, 11, 0.02) 100%);
+    }
+
+    .channel-card-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        flex-shrink: 0;
+    }
+
+    .channel-sms .channel-card-icon {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+
+    .channel-whatsapp .channel-card-icon {
+        background: rgba(37, 211, 102, 0.1);
+        color: #25D366;
+    }
+
+    .channel-email .channel-card-icon {
+        background: rgba(245, 158, 11, 0.1);
+        color: #f59e0b;
+    }
+
+    .channel-card-content {
+        flex: 1;
+    }
+
+    .channel-card-label {
+        font-size: 0.875rem;
+        color: #64748b;
+        margin-bottom: 0.25rem;
+    }
+
+    .channel-card-value {
+        font-size: 1.875rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.25rem;
+    }
+
+    .channel-card-footer {
+        font-size: 0.75rem;
+        color: #94a3b8;
     }
 
     @media (max-width: 768px) {

@@ -22,7 +22,13 @@ class Client extends Model
         'auto_sync_balance',
         'api_key',
         'status',
-        'settings'
+        'tier',
+        'is_test_mode',
+        'settings',
+        'webhook_url',
+        'webhook_secret',
+        'webhook_events',
+        'webhook_active',
     ];
 
     protected $casts = [
@@ -32,7 +38,10 @@ class Client extends Model
         'onfon_last_sync' => 'datetime',
         'auto_sync_balance' => 'boolean',
         'status' => 'boolean',
-        'settings' => 'array'
+        'is_test_mode' => 'boolean',
+        'settings' => 'array',
+        'webhook_events' => 'array',
+        'webhook_active' => 'boolean',
     ];
 
     /**
