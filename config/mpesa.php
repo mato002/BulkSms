@@ -24,7 +24,7 @@ return [
     |
     */
 
-    'consumer_key' => env('MPESA_CONSUMER_KEY', ''),
+    'consumer_key' => env('MPESA_CONSUMER_KEY', 'Yt36YTWRLf1CL3RW47GidbAXtW1OcO4m7U5VuvA6x84BdoQV'),
 
     /*
     |--------------------------------------------------------------------------
@@ -35,7 +35,7 @@ return [
     |
     */
 
-    'consumer_secret' => env('MPESA_CONSUMER_SECRET', ''),
+    'consumer_secret' => env('MPESA_CONSUMER_SECRET', 'p3o13LwjC48GjBGdvcnpptuQc90OSlHJvBeTwkXyJBNQFGJQnqN5gws4gf6frGdh'),
 
     /*
     |--------------------------------------------------------------------------
@@ -46,7 +46,7 @@ return [
     |
     */
 
-    'passkey' => env('MPESA_PASSKEY', ''),
+    'passkey' => env('MPESA_PASSKEY', 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'),
 
     /*
     |--------------------------------------------------------------------------

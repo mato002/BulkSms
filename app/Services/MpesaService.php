@@ -45,6 +45,7 @@ class MpesaService
 
         try {
             $response = Http::withBasicAuth($this->consumerKey, $this->consumerSecret)
+                ->withOptions(['verify' => false]) // Disable SSL verification for development
                 ->get($this->urls['auth']);
 
             if ($response->successful()) {
@@ -135,6 +136,7 @@ class MpesaService
 
         try {
             $response = Http::withToken($accessToken)
+                ->withOptions(['verify' => false]) // Disable SSL verification for development
                 ->post($this->urls['stk_push'], $payload);
 
             $data = $response->json();
@@ -206,6 +208,7 @@ class MpesaService
 
         try {
             $response = Http::withToken($accessToken)
+                ->withOptions(['verify' => false]) // Disable SSL verification for development
                 ->post($this->urls['stk_query'], $payload);
 
             $data = $response->json();
