@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Campaign;
 use App\Services\Messaging\DTO\OutboundMessage;
 use App\Services\Messaging\MessageDispatcher;
 
@@ -13,8 +14,7 @@ class CampaignController extends Controller
     {
         $clientId = session('client_id', 1);
         
-        $query = DB::table('campaigns')
-            ->where('client_id', $clientId);
+        $query = Campaign::where('client_id', $clientId);
         
         // Filter by search
         if ($request->filled('search')) {
@@ -49,6 +49,12 @@ class CampaignController extends Controller
         // Get client details including sender_id
         $client = DB::table('clients')->where('id', $clientId)->first();
         
+        // Get all available senders/clients
+        $senders = DB::table('clients')
+            ->where('status', 1) // Only active clients
+            ->orderBy('name')
+            ->get(['id', 'name', 'sender_id', 'company_name']);
+        
         $contacts = DB::table('contacts')
             ->where('client_id', $clientId)
             ->orderBy('name')
@@ -63,7 +69,7 @@ class CampaignController extends Controller
             ->sort()
             ->values();
         
-        return view('campaigns.create', compact('contacts', 'departments', 'client'));
+        return view('campaigns.create', compact('contacts', 'departments', 'client', 'senders'));
     }
 
     public function store(Request $request)
@@ -80,18 +86,16 @@ class CampaignController extends Controller
         $clientId = session('client_id', 1);
         $recipients = array_filter(array_map('trim', explode(',', $validated['recipients'])));
 
-        DB::table('campaigns')->insert([
+        Campaign::create([
             'client_id' => $clientId,
             'name' => $validated['name'],
             'channel' => $validated['channel'],
             'message' => $validated['message'],
             'sender_id' => $validated['sender_id'] ?? null,
             'template_id' => $validated['template_id'] ?? null,
-            'recipients' => json_encode($recipients),
+            'recipients' => $recipients,
             'status' => 'draft',
             'total_recipients' => count($recipients),
-            'created_at' => now(),
-            'updated_at' => now(),
         ]);
 
         return redirect()->route('campaigns.index')->with('success', 'Campaign created successfully');
@@ -100,8 +104,7 @@ class CampaignController extends Controller
     public function show(string $id)
     {
         $clientId = session('client_id', 1);
-        $campaign = DB::table('campaigns')
-            ->where('client_id', $clientId)
+        $campaign = Campaign::where('client_id', $clientId)
             ->where('id', $id)
             ->first();
 
@@ -119,8 +122,13 @@ class CampaignController extends Controller
         // Get client details including sender_id
         $client = DB::table('clients')->where('id', $clientId)->first();
         
-        $campaign = DB::table('campaigns')
-            ->where('client_id', $clientId)
+        // Get all available senders/clients
+        $senders = DB::table('clients')
+            ->where('status', 1) // Only active clients
+            ->orderBy('name')
+            ->get(['id', 'name', 'sender_id', 'company_name']);
+        
+        $campaign = Campaign::where('client_id', $clientId)
             ->where('id', $id)
             ->first();
 
@@ -128,7 +136,7 @@ class CampaignController extends Controller
             abort(404);
         }
 
-        return view('campaigns.edit', compact('campaign', 'client'));
+        return view('campaigns.edit', compact('campaign', 'client', 'senders'));
     }
 
     public function update(Request $request, string $id)
@@ -142,18 +150,22 @@ class CampaignController extends Controller
         ]);
 
         $clientId = session('client_id', 1);
-
-        DB::table('campaigns')
-            ->where('client_id', $clientId)
+        
+        $campaign = Campaign::where('client_id', $clientId)
             ->where('id', $id)
-            ->update([
-                'name' => $validated['name'],
-                'channel' => $validated['channel'],
-                'message' => $validated['message'],
-                'sender_id' => $validated['sender_id'] ?? null,
-                'template_id' => $validated['template_id'] ?? null,
-                'updated_at' => now(),
-            ]);
+            ->first();
+
+        if (!$campaign) {
+            abort(404);
+        }
+
+        $campaign->update([
+            'name' => $validated['name'],
+            'channel' => $validated['channel'],
+            'message' => $validated['message'],
+            'sender_id' => $validated['sender_id'] ?? null,
+            'template_id' => $validated['template_id'] ?? null,
+        ]);
 
         return redirect()->route('campaigns.index')->with('success', 'Campaign updated successfully');
     }
@@ -162,10 +174,13 @@ class CampaignController extends Controller
     {
         $clientId = session('client_id', 1);
 
-        DB::table('campaigns')
-            ->where('client_id', $clientId)
+        $campaign = Campaign::where('client_id', $clientId)
             ->where('id', $id)
-            ->delete();
+            ->first();
+
+        if ($campaign) {
+            $campaign->delete();
+        }
 
         return redirect()->route('campaigns.index')->with('success', 'Campaign deleted successfully');
     }
@@ -173,8 +188,7 @@ class CampaignController extends Controller
     public function send(string $id, MessageDispatcher $dispatcher)
     {
         $clientId = session('client_id', 1);
-        $campaign = DB::table('campaigns')
-            ->where('client_id', $clientId)
+        $campaign = Campaign::where('client_id', $clientId)
             ->where('id', $id)
             ->first();
 
@@ -182,7 +196,7 @@ class CampaignController extends Controller
             abort(404);
         }
 
-        $recipients = json_decode($campaign->recipients, true) ?? [];
+        $recipients = $campaign->recipients ?? [];
         $sent = 0;
         $failed = 0;
 
@@ -209,15 +223,12 @@ class CampaignController extends Controller
             }
         }
 
-        DB::table('campaigns')
-            ->where('id', $id)
-            ->update([
-                'status' => 'sent',
-                'sent_at' => now(),
-                'sent_count' => $sent,
-                'failed_count' => $failed,
-                'updated_at' => now(),
-            ]);
+        $campaign->update([
+            'status' => 'sent',
+            'sent_at' => now(),
+            'sent_count' => $sent,
+            'failed_count' => $failed,
+        ]);
 
         return redirect()->route('campaigns.show', $id)->with('success', "Campaign sent! {$sent} succeeded, {$failed} failed.");
     }

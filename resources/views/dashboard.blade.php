@@ -76,36 +76,55 @@
     @if($currentClient && $currentClient->balance !== null)
     <div class="row g-3 mb-4">
         <div class="col-12 col-sm-6 col-lg-3">
-            <div class="stat-card stat-card-success">
+            <div class="stat-card stat-card-success" style="cursor: pointer;" onclick="window.location='{{ route('wallet.index') }}'">
                 <div class="stat-icon">
                     <i class="bi bi-wallet2"></i>
                 </div>
                 <div class="stat-content">
-                    <div class="stat-label">Local Balance</div>
+                    <div class="stat-label">
+                        Wallet Balance
+                        @if($currentClient->balance < 100)
+                            <span class="badge bg-warning" title="Low balance">
+                                <i class="bi bi-exclamation-triangle"></i>
+                            </span>
+                        @endif
+                    </div>
                     <div class="stat-value">KSh {{ number_format($stats['local_balance'], 2) }}</div>
-                    <div class="stat-footer">
+                    <div class="stat-footer d-flex justify-content-between align-items-center">
                         <span class="text-muted">{{ number_format($stats['balance_units'], 2) }} units</span>
+                        <a href="{{ route('wallet.topup') }}" class="btn btn-sm btn-success" onclick="event.stopPropagation()">
+                            <i class="bi bi-plus-circle"></i> Top Up
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
 
-        @if($currentClient->onfon_balance !== null)
         <div class="col-12 col-sm-6 col-lg-3">
             <div class="stat-card stat-card-info">
                 <div class="stat-icon">
                     <i class="bi bi-credit-card"></i>
                 </div>
                 <div class="stat-content">
-                    <div class="stat-label">Onfon Balance</div>
-                    <div class="stat-value">KSh {{ number_format($stats['onfon_balance'], 2) }}</div>
+                    <div class="stat-label d-flex justify-content-between align-items-center">
+                        <span>Onfon Balance</span>
+                        <button class="btn btn-sm btn-info" id="syncOnfonBtn" onclick="syncOnfonBalance()" title="Sync from Onfon">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                    </div>
+                    <div class="stat-value" id="onfonBalanceValue">
+                        @if($currentClient->onfon_balance !== null)
+                            KSh {{ number_format($stats['onfon_balance'], 2) }}
+                        @else
+                            <span class="text-muted" style="font-size: 1rem;">Not synced</span>
+                        @endif
+                    </div>
                     <div class="stat-footer">
-                        <span class="text-muted">Last sync: {{ $currentClient->onfon_last_sync ? $currentClient->onfon_last_sync->diffForHumans() : 'Never' }}</span>
+                        <span class="text-muted" id="onfonLastSync">Last sync: {{ $currentClient->onfon_last_sync ? $currentClient->onfon_last_sync->diffForHumans() : 'Never' }}</span>
                     </div>
                 </div>
             </div>
         </div>
-        @endif
 
         <div class="col-12 col-sm-6 col-lg-3">
             <div class="stat-card stat-card-primary">
@@ -518,15 +537,21 @@
         <!-- Recent Activity -->
         <div class="col-12 col-lg-4">
             <div class="dashboard-card">
-                <div class="card-header-custom">
+                <div class="card-header-custom d-flex justify-content-between align-items-center">
                     <h5 class="card-title-custom mb-0">
                         <i class="bi bi-clock-history me-2"></i>Recent Activity
                     </h5>
+                    @if(count($recentActivity) > 5)
+                    <button class="btn btn-sm btn-link text-decoration-none" id="toggleActivityBtn" onclick="toggleRecentActivity()">
+                        <span id="toggleActivityText">Show All</span>
+                        <i class="bi bi-chevron-down" id="toggleActivityIcon"></i>
+                    </button>
+                    @endif
                 </div>
                 <div class="card-body">
-                    <div class="activity-timeline">
-                        @forelse($recentActivity as $activity)
-                            <div class="activity-item">
+                    <div class="activity-timeline" id="activityTimeline">
+                        @forelse($recentActivity as $index => $activity)
+                            <div class="activity-item" data-activity-index="{{ $index }}" style="{{ $index >= 5 ? 'display: none;' : '' }}">
                                 <div class="activity-icon activity-icon-{{ $activity['color'] }}">
                                     <i class="bi {{ $activity['icon'] }}"></i>
                                 </div>
@@ -557,9 +582,17 @@
                     <h5 class="card-title-custom mb-0">
                         <i class="bi bi-megaphone me-2"></i>Recent Campaigns
                     </h5>
-                    <a href="{{ route('campaigns.index') }}" class="btn btn-sm btn-outline-primary">
-                        View All <i class="bi bi-arrow-right ms-1"></i>
-                    </a>
+                    <div class="d-flex gap-2">
+                        @if($recentCampaigns->count() > 5)
+                        <button class="btn btn-sm btn-link text-decoration-none" id="toggleCampaignsBtn" onclick="toggleRecentCampaigns()">
+                            <span id="toggleCampaignsText">Show All</span>
+                            <i class="bi bi-chevron-down" id="toggleCampaignsIcon"></i>
+                        </button>
+                        @endif
+                        <a href="{{ route('campaigns.index') }}" class="btn btn-sm btn-outline-primary">
+                            View All <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
@@ -573,9 +606,9 @@
                                     <th>Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @foreach($recentCampaigns as $campaign)
-                                <tr>
+                            <tbody id="campaignsTableBody">
+                                @foreach($recentCampaigns as $index => $campaign)
+                                <tr class="campaign-row" data-campaign-index="{{ $index }}" style="{{ $index >= 5 ? 'display: none;' : '' }}">
                                     <td>
                                         <strong>{{ $campaign->name }}</strong>
                                     </td>
@@ -696,6 +729,17 @@
         font-size: 0.875rem;
         color: #64748b;
         margin-bottom: 0.25rem;
+    }
+
+    .stat-label .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        line-height: 1;
+    }
+
+    #syncOnfonBtn:hover {
+        transform: scale(1.1);
+        transition: transform 0.2s ease;
     }
 
     .stat-value {
@@ -1051,18 +1095,232 @@
         color: #94a3b8;
     }
 
-    @media (max-width: 768px) {
+    @media (max-width: 992px) {
         .page-header {
             flex-direction: column;
             align-items: flex-start;
+        }
+
+        .header-actions {
+            width: 100%;
+            margin-top: 0.5rem;
+        }
+
+        .header-actions .btn {
+            flex: 1;
+        }
+
+        .channel-card {
+            margin-bottom: 0.75rem;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .page-title {
+            font-size: 1.5rem;
         }
 
         .stat-value {
             font-size: 1.5rem;
         }
 
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            font-size: 1.25rem;
+        }
+
+        .time-widget {
+            padding: 1rem;
+        }
+
         .time-widget-value {
             font-size: 1.5rem;
+        }
+
+        .time-widget-icon {
+            width: 48px;
+            height: 48px;
+            font-size: 1.5rem;
+        }
+
+        .admin-stat-icon {
+            width: 48px;
+            height: 48px;
+            font-size: 1.25rem;
+        }
+
+        .admin-stat-value {
+            font-size: 1.5rem;
+        }
+
+        .channel-card-icon {
+            width: 48px;
+            height: 48px;
+            font-size: 1.5rem;
+        }
+
+        .channel-card-value {
+            font-size: 1.5rem;
+        }
+
+        /* Stack table on mobile */
+        .table-responsive table {
+            font-size: 0.875rem;
+        }
+
+        .table-responsive th,
+        .table-responsive td {
+            padding: 0.5rem;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .page-title {
+            font-size: 1.25rem;
+        }
+
+        .stat-card {
+            padding: 1rem;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1rem;
+        }
+
+        .time-widget {
+            padding: 0.75rem;
+        }
+
+        .time-widget-value {
+            font-size: 1.25rem;
+        }
+
+        .time-widget-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1.25rem;
+        }
+
+        .channel-card {
+            padding: 1rem;
+        }
+
+        .channel-card-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1.25rem;
+        }
+
+        .channel-card-value {
+            font-size: 1.25rem;
+        }
+
+        .quick-stat-icon {
+            width: 32px;
+            height: 32px;
+            font-size: 1rem;
+        }
+
+        .quick-stat-value {
+            font-size: 1rem;
+        }
+
+        .admin-stat-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1rem;
+        }
+
+        .admin-stat-value {
+            font-size: 1.25rem;
+        }
+
+        .card-header-custom {
+            padding: 1rem;
+        }
+
+        .card-title-custom {
+            font-size: 0.9rem;
+        }
+
+        /* Make tables mobile-friendly with horizontal scroll */
+        .table-responsive {
+            margin: 0 -1rem;
+            padding: 0 1rem;
+        }
+
+        .table {
+            font-size: 0.8rem;
+        }
+
+        .table th,
+        .table td {
+            padding: 0.5rem 0.25rem;
+            white-space: nowrap;
+        }
+
+        /* Stack action buttons in tables */
+        .table .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.4rem;
+        }
+    }
+
+    @media (max-width: 400px) {
+        .page-title {
+            font-size: 1.1rem;
+        }
+
+        .stat-card {
+            flex-direction: column;
+            text-align: center;
+            padding: 0.75rem;
+        }
+
+        .stat-icon {
+            margin: 0 auto 0.5rem;
+        }
+
+        .time-widget {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .time-widget-icon {
+            margin: 0 auto 0.5rem;
+        }
+
+        .time-widget-value {
+            font-size: 1.1rem;
+        }
+
+        .header-actions {
+            flex-direction: column;
+        }
+
+        .header-actions .btn {
+            width: 100%;
+        }
+
+        .channel-card {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .channel-card-icon {
+            margin: 0 auto 0.5rem;
         }
     }
 </style>
@@ -1209,5 +1467,131 @@
     // Update immediately and then every second
     updateTime();
     setInterval(updateTime, 1000);
+
+    // Onfon Balance Sync Function
+    function syncOnfonBalance() {
+        const btn = document.getElementById('syncOnfonBtn');
+        const balanceValue = document.getElementById('onfonBalanceValue');
+        const lastSync = document.getElementById('onfonLastSync');
+        
+        // Disable button and show loading
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-arrow-clockwise spinner-border spinner-border-sm"></i>';
+        
+        // Make AJAX request
+        fetch('{{ route("wallet.onfon.sync") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update balance display
+                balanceValue.innerHTML = 'KSh ' + parseFloat(data.data.new_balance).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+                
+                // Update last sync
+                lastSync.innerHTML = 'Last sync: ' + data.data.last_sync;
+                
+                // Show success message
+                showNotification('success', data.message);
+                
+                // Show difference if significant
+                if (Math.abs(data.data.difference) > 0) {
+                    const diffMsg = data.data.difference > 0 
+                        ? `+KSh ${parseFloat(data.data.difference).toFixed(2)}` 
+                        : `KSh ${parseFloat(data.data.difference).toFixed(2)}`;
+                    showNotification('info', `Balance changed: ${diffMsg}`);
+                }
+            } else {
+                showNotification('error', data.message || 'Failed to sync balance');
+            }
+        })
+        .catch(error => {
+            console.error('Sync error:', error);
+            showNotification('error', 'Network error. Please try again.');
+        })
+        .finally(() => {
+            // Re-enable button
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
+        });
+    }
+
+    // Notification helper function
+    function showNotification(type, message) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 150);
+        }, 5000);
+    }
+
+    // Toggle Recent Activity
+    let activityExpanded = false;
+    function toggleRecentActivity() {
+        const items = document.querySelectorAll('.activity-item');
+        const btn = document.getElementById('toggleActivityBtn');
+        const text = document.getElementById('toggleActivityText');
+        const icon = document.getElementById('toggleActivityIcon');
+        
+        activityExpanded = !activityExpanded;
+        
+        items.forEach((item, index) => {
+            if (index >= 5) {
+                item.style.display = activityExpanded ? 'flex' : 'none';
+            }
+        });
+        
+        if (activityExpanded) {
+            text.textContent = 'Show Less';
+            icon.className = 'bi bi-chevron-up';
+        } else {
+            text.textContent = 'Show All';
+            icon.className = 'bi bi-chevron-down';
+        }
+    }
+
+    // Toggle Recent Campaigns
+    let campaignsExpanded = false;
+    function toggleRecentCampaigns() {
+        const rows = document.querySelectorAll('.campaign-row');
+        const btn = document.getElementById('toggleCampaignsBtn');
+        const text = document.getElementById('toggleCampaignsText');
+        const icon = document.getElementById('toggleCampaignsIcon');
+        
+        campaignsExpanded = !campaignsExpanded;
+        
+        rows.forEach((row, index) => {
+            if (index >= 5) {
+                row.style.display = campaignsExpanded ? 'table-row' : 'none';
+            }
+        });
+        
+        if (campaignsExpanded) {
+            text.textContent = 'Show Less';
+            icon.className = 'bi bi-chevron-up';
+        } else {
+            text.textContent = 'Show All';
+            icon.className = 'bi bi-chevron-down';
+        }
+    }
 </script>
 @endsection

@@ -93,7 +93,7 @@
         </div>
 
         <div class="footer">
-            <p>&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+            <p>&copy; {{ date('Y') }} {{ config('app.name') }} by Matech Technologies. All rights reserved.</p>
             <p>This is an automated message. Please do not reply directly to this email.</p>
         </div>
     </div>

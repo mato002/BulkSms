@@ -465,7 +465,7 @@
 
         <div class="text-center mt-4">
             <p style="color: rgba(255, 255, 255, 0.8); font-size: 14px;">
-                &copy; {{ date('Y') }} Bulk SMS CRM. All rights reserved.
+                &copy; {{ date('Y') }} BulkSms by Matech Technologies. All rights reserved.
             </p>
         </div>
     </div>

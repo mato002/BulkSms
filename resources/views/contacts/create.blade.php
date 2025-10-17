@@ -2,9 +2,9 @@
 
 @section('content')
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center mb-4 gap-2">
         <h1 class="mb-0"><i class="bi bi-person-plus-fill me-2"></i>Add Contact</h1>
-        <a href="{{ route('contacts.index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i> Back</a>
+        <a href="{{ route('contacts.index') }}" class="btn btn-outline-secondary w-100 w-sm-auto"><i class="bi bi-arrow-left me-1"></i> Back</a>
     </div>
 
     <div class="card shadow-sm">
@@ -51,9 +51,11 @@
                         @enderror
                     </div>
 
-                    <div class="col-12 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1"></i> Create Contact</button>
-                        <a href="{{ route('contacts.index') }}" class="btn btn-secondary">Cancel</a>
+                    <div class="col-12">
+                        <div class="d-flex flex-column flex-sm-row gap-2">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-1"></i> Create Contact</button>
+                            <a href="{{ route('contacts.index') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
                     </div>
                 </div>
             </form>

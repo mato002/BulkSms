@@ -36,7 +36,22 @@
     <span>WhatsApp</span>
 </a>
 
+<div class="nav-section-title mt-4">Developer</div>
+<a href="{{ route('api.docs') }}" class="sidebar-nav-item {{ request()->routeIs('api.docs') ? 'active' : '' }}">
+    <i class="bi bi-code-square"></i>
+    <span>API Documentation</span>
+</a>
+
 <div class="nav-section-title mt-4">System</div>
+<a href="{{ route('wallet.index') }}" class="sidebar-nav-item {{ request()->routeIs('wallet.*') ? 'active' : '' }}">
+    <i class="bi bi-wallet2"></i>
+    <span>Wallet</span>
+    @if(Auth::check() && Auth::user()->balance < 100)
+        <span class="badge bg-warning ms-auto" title="Low balance">
+            <i class="bi bi-exclamation-triangle"></i>
+        </span>
+    @endif
+</a>
 <a href="{{ route('analytics.index') }}" class="sidebar-nav-item {{ request()->routeIs('analytics.*') ? 'active' : '' }}">
     <i class="bi bi-bar-chart"></i>
     <span>Analytics</span>

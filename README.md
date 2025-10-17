@@ -252,7 +252,7 @@ php artisan test
 
 ## License
 
-Proprietary. All rights reserved.
+BulkSms - Proprietary. All rights reserved by Matech Technologies.
 
 ## Support
 

@@ -97,7 +97,7 @@
         </div>
 
         <div class="footer">
-            <p>&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+            <p>&copy; {{ date('Y') }} {{ config('app.name') }} by Matech Technologies. All rights reserved.</p>
             <p>For support, contact us at <a href="mailto:support@yourplatform.com">support@yourplatform.com</a></p>
         </div>
     </div>

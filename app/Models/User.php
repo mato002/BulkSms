@@ -77,6 +77,82 @@ class User extends Authenticatable
     {
         return $this->role === 'user';
     }
+
+    /**
+     * Proxy methods to access client's balance methods
+     */
+    
+    /**
+     * Get the user's balance (from associated client)
+     */
+    public function getBalanceAttribute()
+    {
+        return $this->client ? $this->client->balance : 0;
+    }
+
+    /**
+     * Get balance in units
+     */
+    public function getBalanceInUnits(): float
+    {
+        return $this->client ? $this->client->getBalanceInUnits() : 0;
+    }
+
+    /**
+     * Convert units to KSH
+     */
+    public function unitsToKsh(float $units): float
+    {
+        return $this->client ? $this->client->unitsToKsh($units) : 0;
+    }
+
+    /**
+     * Convert KSH to units
+     */
+    public function kshToUnits(float $ksh): float
+    {
+        return $this->client ? $this->client->kshToUnits($ksh) : 0;
+    }
+
+    /**
+     * Check if user has sufficient balance
+     */
+    public function hasSufficientBalance(float $amount, bool $isUnits = false): bool
+    {
+        return $this->client ? $this->client->hasSufficientBalance($amount, $isUnits) : false;
+    }
+
+    /**
+     * Check if user has sufficient units
+     */
+    public function hasSufficientUnits(float $units): bool
+    {
+        return $this->client ? $this->client->hasSufficientUnits($units) : false;
+    }
+
+    /**
+     * Get sender ID (from associated client)
+     */
+    public function getSenderIdAttribute()
+    {
+        return $this->client ? $this->client->sender_id : '';
+    }
+
+    /**
+     * Get contact (from associated client)
+     */
+    public function getContactAttribute()
+    {
+        return $this->client ? $this->client->contact : '';
+    }
+
+    /**
+     * Get company name (from associated client)
+     */
+    public function getCompanyNameAttribute()
+    {
+        return $this->client ? $this->client->company_name : '';
+    }
 }
 
 

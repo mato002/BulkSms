@@ -4,13 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API Documentation - Bulk SMS Platform</title>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        header h1 { font-size: 2.5em; margin-bottom: 10px; }
-        header p { font-size: 1.2em; opacity: 0.9; }
+         header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
+         header h1 { font-size: 2.5em; margin-bottom: 10px; }
+         header p { font-size: 1.2em; opacity: 0.9; }
+         header a:hover { background: rgba(255,255,255,0.2); }
         .sidebar { position: fixed; left: 0; top: 200px; width: 250px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-height: calc(100vh - 220px); overflow-y: auto; }
         .sidebar h3 { margin-bottom: 15px; color: #667eea; font-size: 1.1em; }
         .sidebar ul { list-style: none; }
@@ -54,8 +59,13 @@
 </head>
 <body>
     <header>
-        <h1>📡 API Documentation</h1>
-        <p>Comprehensive guide to integrate SMS & WhatsApp messaging</p>
+        <div style="max-width: 1200px; margin: 0 auto; position: relative;">
+            <a href="/" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: white; text-decoration: none; font-size: 1.1em; display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(255,255,255,0.1); border-radius: 8px; transition: all 0.3s;">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+            <h1><i class="fas fa-code"></i> API Documentation</h1>
+            <p>Comprehensive guide to integrate SMS & WhatsApp messaging</p>
+        </div>
     </header>
 
     <div class="container">
@@ -78,7 +88,7 @@
         <div class="content">
             <!-- GETTING STARTED -->
             <section id="getting-started" class="section">
-                <h2>🚀 Getting Started</h2>
+                <h2><i class="fas fa-rocket"></i> Getting Started</h2>
                 
                 <div class="alert alert-info">
                     <strong>Welcome!</strong> This API allows you to send SMS and WhatsApp messages from your application. Get your API key from your account manager and start integrating in minutes.
@@ -111,7 +121,7 @@
 
             <!-- AUTHENTICATION -->
             <section id="authentication" class="section">
-                <h2>🔐 Authentication</h2>
+                <h2><i class="fas fa-lock"></i> Authentication</h2>
                 
                 <p>All API requests must include your API key in the request header.</p>
 
@@ -131,7 +141,7 @@
 
             <!-- SMS ENDPOINTS -->
             <section id="sms" class="section">
-                <h2>📱 SMS Endpoints</h2>
+                <h2><i class="fas fa-sms"></i> SMS Endpoints</h2>
 
                 <!-- Send SMS -->
                 <div class="endpoint">
@@ -421,7 +431,7 @@ axios.post('{{ config('app.url') }}/api/1/sms/send', {
 
             <!-- WHATSAPP ENDPOINTS -->
             <section id="whatsapp" class="section">
-                <h2>💬 WhatsApp Endpoints</h2>
+                <h2><i class="fab fa-whatsapp"></i> WhatsApp Endpoints</h2>
 
                 <div class="endpoint">
                     <h3>Send WhatsApp Message</h3>
@@ -487,7 +497,7 @@ axios.post('{{ config('app.url') }}/api/1/sms/send', {
 
             <!-- WALLET & TOP-UP ENDPOINTS -->
             <section id="wallet" class="section">
-                <h2>💰 Wallet & Top-up Endpoints</h2>
+                <h2><i class="fas fa-wallet"></i> Wallet & Top-up Endpoints</h2>
 
                 <!-- Check Balance -->
                 <div class="endpoint">
@@ -701,7 +711,7 @@ axios.post('{{ config('app.url') }}/api/1/sms/send', {
 
             <!-- CONTACTS ENDPOINTS -->
             <section id="contacts" class="section">
-                <h2>📇 Contacts Endpoints</h2>
+                <h2><i class="fas fa-address-book"></i> Contacts Endpoints</h2>
 
                 <div class="endpoint">
                     <h3>List Contacts</h3>
@@ -749,7 +759,7 @@ Jane Smith,254723456789,jane@example.com,Marketing</pre>
 
             <!-- CAMPAIGNS ENDPOINTS -->
             <section id="campaigns" class="section">
-                <h2>📢 Campaigns Endpoints</h2>
+                <h2><i class="fas fa-bullhorn"></i> Campaigns Endpoints</h2>
 
                 <div class="endpoint">
                     <h3>Create Campaign</h3>
@@ -782,7 +792,7 @@ Jane Smith,254723456789,jane@example.com,Marketing</pre>
 
             <!-- WEBHOOKS -->
             <section id="webhooks" class="section">
-                <h2>🔔 Webhooks</h2>
+                <h2><i class="fas fa-bell"></i> Webhooks</h2>
 
                 <div class="alert alert-info">
                     <strong>Stay updated!</strong> Configure a webhook URL to receive real-time notifications about events in your account.
@@ -896,7 +906,7 @@ if (crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature
 
             <!-- ERROR CODES -->
             <section id="errors" class="section">
-                <h2>⚠️ Error Codes</h2>
+                <h2><i class="fas fa-exclamation-triangle"></i> Error Codes</h2>
 
                 <table class="param-table">
                     <thead>
@@ -958,7 +968,7 @@ if (crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature
 
             <!-- CODE EXAMPLES -->
             <section id="code-examples" class="section">
-                <h2>💻 Complete Code Examples</h2>
+                <h2><i class="fas fa-code"></i> Complete Code Examples</h2>
 
                 <h3>PHP Integration Example</h3>
                 <div class="code-block">
@@ -1108,7 +1118,7 @@ print(topup_result)</pre>
 
             <!-- SUPPORT -->
             <section class="section">
-                <h2>📞 Need Help?</h2>
+                <h2><i class="fas fa-headset"></i> Need Help?</h2>
                 <div class="alert alert-success">
                     <p><strong>Contact Support:</strong></p>
                     <ul style="margin-left: 20px; margin-top: 10px;">

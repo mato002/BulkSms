@@ -2,7 +2,9 @@
 
 @section('content')
 <div class="container-fluid">
-    <h1 class="mb-4">Settings</h1>
+    <div class="mb-4">
+        <h1><i class="bi bi-gear-fill me-2"></i>Settings</h1>
+    </div>
 
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">

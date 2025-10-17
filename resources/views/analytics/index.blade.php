@@ -2,11 +2,11 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1>Analytics & Reports</h1>
-        <form method="GET" action="{{ route('analytics.index') }}" class="d-flex gap-2">
-            <input type="date" class="form-control" name="start_date" value="{{ $startDate }}" style="width: auto;">
-            <input type="date" class="form-control" name="end_date" value="{{ $endDate }}" style="width: auto;">
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center mb-4 gap-3">
+        <h1 class="mb-0"><i class="bi bi-bar-chart-fill me-2"></i>Analytics & Reports</h1>
+        <form method="GET" action="{{ route('analytics.index') }}" class="d-flex flex-column flex-sm-row gap-2 w-100 w-lg-auto">
+            <input type="date" class="form-control" name="start_date" value="{{ $startDate }}">
+            <input type="date" class="form-control" name="end_date" value="{{ $endDate }}">
             <button type="submit" class="btn btn-primary">Apply</button>
         </form>
     </div>

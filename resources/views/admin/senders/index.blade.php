@@ -3,12 +3,12 @@
 @section('content')
 <div class="container-fluid">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-3">
         <div>
             <h1 class="mb-1"><i class="bi bi-building me-2"></i>Sender Management</h1>
             <p class="text-muted mb-0">Manage all your senders/tenants and their API keys</p>
         </div>
-        <a href="{{ route('admin.senders.create') }}" class="btn btn-primary">
+        <a href="{{ route('admin.senders.create') }}" class="btn btn-primary w-100 w-md-auto">
             <i class="bi bi-plus-lg me-2"></i>Add New Sender
         </a>
     </div>

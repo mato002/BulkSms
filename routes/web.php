@@ -33,8 +33,11 @@ Route::get('/api-documentation', function() {
     return view('api-documentation');
 })->name('api.documentation');
 
+// Short URL Redirect (no authentication required) - Ultra short!
+Route::get('/x/{code}', [App\Http\Controllers\ShortLinkController::class, 'redirect'])->name('short.redirect');
+
 // Public Reply Routes (no authentication required)
-Route::get('/reply/{token}', [PublicReplyController::class, 'showReplyForm'])->name('public.reply.form');
+Route::get('/reply/{token}', [PublicReplyController::class, 'showReplyForm'])->name('public.reply');
 Route::post('/reply/{token}', [PublicReplyController::class, 'submitReply'])->name('public.reply.submit');
 
 // WhatsApp Webhook Routes (no authentication required)
@@ -104,6 +107,14 @@ Route::post('/reset-password-manual', function(Request $request) {
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
+// Landing Page (for guests) / Dashboard (for authenticated users)
+Route::get('/', function() {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+    return view('welcome');
+})->name('home');
+
 // Admin notification page (for monitoring password resets)
 Route::get('/admin/security-logs', function() {
     $logFile = storage_path('logs/laravel.log');
@@ -128,7 +139,7 @@ Route::get('/admin/security-logs', function() {
 
 // Protected Routes (require authentication)
 Route::middleware(['auth'])->group(function () {
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Search
     Route::get('/search', [App\Http\Controllers\SearchController::class, 'showResults'])->name('search.results');
@@ -167,6 +178,22 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/settings/client', [SettingsController::class, 'updateClient'])->name('settings.client.update');
     Route::post('/settings/channel/{channel}', [SettingsController::class, 'updateChannel'])->name('settings.channel.update');
     Route::post('/settings/regenerate-api-key', [SettingsController::class, 'regenerateApiKey'])->name('settings.regenerate-api-key');
+
+    // Wallet & Top-up Routes
+    Route::prefix('wallet')->name('wallet.')->group(function () {
+        Route::get('/', [App\Http\Controllers\WalletController::class, 'index'])->name('index');
+        Route::get('/topup', [App\Http\Controllers\WalletController::class, 'topup'])->name('topup');
+        Route::post('/topup', [App\Http\Controllers\WalletController::class, 'initiateTopup'])->name('topup.initiate');
+        Route::get('/status/{transactionRef}', [App\Http\Controllers\WalletController::class, 'status'])->name('status');
+        Route::get('/export', [App\Http\Controllers\WalletController::class, 'exportTransactions'])->name('export');
+        
+        // Onfon Balance Management
+        Route::post('/onfon/sync', [App\Http\Controllers\WalletController::class, 'syncOnfonBalance'])->name('onfon.sync');
+        Route::get('/onfon/balance', [App\Http\Controllers\WalletController::class, 'getOnfonBalance'])->name('onfon.balance');
+    });
+
+    // API Documentation & Developer Portal
+    Route::get('/api-docs', [App\Http\Controllers\ApiDocumentationController::class, 'index'])->name('api.docs');
 
     // Notifications
     Route::prefix('notifications')->name('notifications.')->group(function () {

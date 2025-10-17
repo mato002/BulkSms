@@ -1,0 +1,77 @@
+
+=================================================
+    FORTRESS API CREDENTIALS FOR PCIP
+=================================================
+
+Generated: 2025-10-10 05:55:04
+
+Client ID:      3
+Sender ID:      FORTRESS
+API Key:        DN3QXwUwkzhCr0Y6w3JfSMHiyrvpE0tQ
+
+=================================================
+    API ENDPOINTS
+=================================================
+
+Base URL: http://localhost:8000
+
+1. Send SMS:
+   POST http://localhost:8000/api/3/messages/send
+   
+2. Check Balance:
+   GET http://localhost:8000/api/3/client/balance
+   
+3. SMS History:
+   GET http://localhost:8000/api/3/sms/history
+
+=================================================
+    HEADERS (Required)
+=================================================
+
+X-API-Key: DN3QXwUwkzhCr0Y6w3JfSMHiyrvpE0tQ
+Content-Type: application/json
+
+=================================================
+    SEND SMS REQUEST EXAMPLE
+=================================================
+
+{
+    "channel": "sms",
+    "recipient": "254712345678",
+    "body": "Your message here",
+    "sender": "FORTRESS"
+}
+
+=================================================
+    PCIP INTEGRATION STEPS
+=================================================
+
+1. In PCIP system, configure SMS settings:
+   - API URL: http://localhost:8000/api
+   - Client ID: 3
+   - API Key: DN3QXwUwkzhCr0Y6w3JfSMHiyrvpE0tQ
+   - Sender: FORTRESS
+
+2. When sending SMS from PCIP:
+   - Make POST request to send endpoint
+   - Include X-API-Key header
+   - Send JSON with recipient and message
+
+3. Check balance before sending:
+   - GET request to balance endpoint
+   - Returns available balance and units
+
+4. Track sent messages:
+   - GET request to history endpoint
+   - View all sent SMS with status
+
+=================================================
+    SUPPORT
+=================================================
+
+For issues or questions, contact system administrator.
+
+Balance: KSH 100.00
+Units Available: 100.00
+Status: Active
+

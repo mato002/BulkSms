@@ -406,6 +406,7 @@
 
             .main-header {
                 left: 0;
+                padding: 0 1rem;
             }
 
             .main-wrapper {
@@ -419,11 +420,23 @@
             .header-search {
                 display: none;
             }
+
+            .header-right {
+                gap: 1rem;
+            }
         }
 
-        @media (max-width: 576px) {
+        @media (max-width: 768px) {
+            :root {
+                --header-height: 60px;
+            }
+
             .main-content {
                 padding: 1rem;
+            }
+
+            .main-header {
+                padding: 0 0.75rem;
             }
 
             .user-info {
@@ -433,6 +446,107 @@
             .footer-content {
                 flex-direction: column;
                 text-align: center;
+                gap: 0.5rem;
+            }
+
+            .footer-links {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .notification-dropdown {
+                width: 320px !important;
+            }
+
+            /* Make cards stack better on mobile */
+            .card {
+                margin-bottom: 1rem;
+            }
+
+            /* Improve button groups on mobile */
+            .btn-group {
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+
+            .btn-group .btn {
+                width: 100%;
+            }
+
+            /* Better table handling */
+            .table-responsive {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .main-content {
+                padding: 0.75rem;
+            }
+
+            .main-header {
+                padding: 0 0.5rem;
+                height: 56px;
+            }
+
+            :root {
+                --header-height: 56px;
+            }
+
+            .user-avatar {
+                width: 32px;
+                height: 32px;
+                font-size: 0.8rem;
+            }
+
+            .notification-dropdown {
+                width: 280px !important;
+            }
+
+            .dropdown-menu {
+                min-width: 200px;
+            }
+
+            /* Stack header actions vertically if needed */
+            .header-actions {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .header-actions .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            /* Smaller notification badge */
+            .notification-badge {
+                width: 16px;
+                height: 16px;
+                font-size: 0.65rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .main-content {
+                padding: 0.5rem;
+            }
+
+            .sidebar-brand {
+                font-size: 1.25rem;
+            }
+
+            .sidebar-brand i {
+                font-size: 1.5rem;
+            }
+
+            .footer-text {
+                font-size: 0.75rem;
+            }
+
+            .footer-links a {
+                font-size: 0.75rem;
             }
         }
 
@@ -560,7 +674,7 @@
         <div class="sidebar-header">
             <a href="{{ url('/') }}" class="sidebar-brand">
                 <i class="bi bi-chat-dots-fill"></i>
-                <span>Bulk SMS</span>
+                <span>BulkSms</span>
             </a>
         </div>
         <nav class="sidebar-nav">
@@ -658,7 +772,7 @@
         <!-- Footer -->
         <footer class="main-footer">
             <div class="footer-content">
-                <p class="footer-text">&copy; {{ date('Y') }} Bulk SMS Laravel. All rights reserved.</p>
+                <p class="footer-text">&copy; {{ date('Y') }} BulkSms by Matech Technologies. All rights reserved.</p>
                 <div class="footer-links">
                     <a href="#">Documentation</a>
                     <a href="#">Support</a>

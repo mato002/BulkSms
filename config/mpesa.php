@@ -81,7 +81,7 @@ return [
     |
     */
 
-    'callback_url' => env('MPESA_CALLBACK_URL', env('APP_URL') . '/api/webhooks/mpesa/callback'),
+    'callback_url' => env('MPESA_CALLBACK_URL', 'https://duke-nonvolcanic-constrainedly.ngrok-free.dev/api/webhooks/mpesa/callback'),
 
     /*
     |--------------------------------------------------------------------------
@@ -92,7 +92,7 @@ return [
     |
     */
 
-    'timeout_url' => env('MPESA_TIMEOUT_URL', env('APP_URL') . '/api/webhooks/mpesa/timeout'),
+    'timeout_url' => env('MPESA_TIMEOUT_URL', 'https://duke-nonvolcanic-constrainedly.ngrok-free.dev/api/webhooks/mpesa/timeout'),
 
     /*
     |--------------------------------------------------------------------------

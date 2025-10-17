@@ -80,7 +80,7 @@
         </div>
 
         <div class="footer">
-            <p>&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+            <p>&copy; {{ date('Y') }} {{ config('app.name') }} by Matech Technologies. All rights reserved.</p>
             <p>This is an automated alert. You can adjust notification settings in your account.</p>
         </div>
     </div>

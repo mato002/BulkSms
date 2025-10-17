@@ -7,6 +7,7 @@ use App\Models\Contact;
 use App\Models\Message;
 use App\Services\Messaging\Contracts\MessageSender;
 use App\Services\Messaging\DTO\OutboundMessage;
+use App\Services\UrlShortenerService;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\App;
@@ -59,11 +60,12 @@ class MessageDispatcher
             // Generate reply link and append to message body for SMS
             $messageBody = $outbound->body;
             if ($outbound->channel === 'sms') {
-                $token = \App\Http\Controllers\PublicReplyController::encodeToken($message->id);
-                // Build absolute URL from configured APP_URL to avoid localhost in CLI context
-                $baseUrl = rtrim(config('app.url'), '/');
-                $replyUrl = $baseUrl . "/reply/{$token}";
-                $messageBody .= "\n\nReply: {$replyUrl}";
+                // Use URL shortener service to create a short link
+                $urlShortener = app(UrlShortenerService::class);
+                $shortUrl = $urlShortener->createShortLink($message->id);
+                
+                // Append short URL to message
+                $messageBody .= "\n\nReply: {$shortUrl}";
                 
                 // Update the message body with the reply link
                 $message->body = $messageBody;
