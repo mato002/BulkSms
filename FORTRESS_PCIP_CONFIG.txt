@@ -3,32 +3,37 @@
     FORTRESS API CREDENTIALS FOR PCIP
 =================================================
 
-Generated: 2025-10-10 05:55:04
+Generated: 2025-10-17 19:03:00
+STATUS: ✅ TESTED & WORKING - SMS sent to 0728883160 successfully!
 
-Client ID:      3
+Client ID:      2
 Sender ID:      FORTRESS
-API Key:        DN3QXwUwkzhCr0Y6w3JfSMHiyrvpE0tQ
+API Key:        USr4kTWk6nEcolzwiSTZJgMjZ0c4F2uh
 
 =================================================
     API ENDPOINTS
 =================================================
 
-Base URL: http://localhost:8000
+PRODUCTION BASE URL: https://crm.pradytecai.com
+LOCAL BASE URL: http://127.0.0.1:8000
 
 1. Send SMS:
-   POST http://localhost:8000/api/3/messages/send
+   PRODUCTION: POST https://crm.pradytecai.com/api/2/messages/send
+   LOCAL:      POST http://127.0.0.1:8000/api/2/messages/send
    
 2. Check Balance:
-   GET http://localhost:8000/api/3/client/balance
+   PRODUCTION: GET https://crm.pradytecai.com/api/2/client/balance
+   LOCAL:      GET http://127.0.0.1:8000/api/2/client/balance
    
 3. SMS History:
-   GET http://localhost:8000/api/3/sms/history
+   PRODUCTION: GET https://crm.pradytecai.com/api/2/sms/history
+   LOCAL:      GET http://127.0.0.1:8000/api/2/sms/history
 
 =================================================
     HEADERS (Required)
 =================================================
 
-X-API-Key: DN3QXwUwkzhCr0Y6w3JfSMHiyrvpE0tQ
+X-API-Key: USr4kTWk6nEcolzwiSTZJgMjZ0c4F2uh
 Content-Type: application/json
 
 =================================================
@@ -36,26 +41,30 @@ Content-Type: application/json
 =================================================
 
 {
+    "client_id": 2,
     "channel": "sms",
-    "recipient": "254712345678",
+    "recipient": "254728883160",
     "body": "Your message here",
     "sender": "FORTRESS"
 }
+
+✅ TESTED: Message successfully sent to 0728883160
 
 =================================================
     PCIP INTEGRATION STEPS
 =================================================
 
 1. In PCIP system, configure SMS settings:
-   - API URL: http://localhost:8000/api
-   - Client ID: 3
-   - API Key: DN3QXwUwkzhCr0Y6w3JfSMHiyrvpE0tQ
+   - PRODUCTION API URL: https://crm.pradytecai.com/api/2/messages/send
+   - LOCAL API URL: http://127.0.0.1:8000/api/2/messages/send
+   - Client ID: 2
+   - API Key: USr4kTWk6nEcolzwiSTZJgMjZ0c4F2uh
    - Sender: FORTRESS
 
 2. When sending SMS from PCIP:
    - Make POST request to send endpoint
    - Include X-API-Key header
-   - Send JSON with recipient and message
+   - Send JSON with client_id, channel, recipient, body, sender
 
 3. Check balance before sending:
    - GET request to balance endpoint
@@ -64,6 +73,18 @@ Content-Type: application/json
 4. Track sent messages:
    - GET request to history endpoint
    - View all sent SMS with status
+
+=================================================
+    HOW IT WORKS (Message Flow)
+=================================================
+
+PCIP System → BulkSms API → Onfon → Recipient Phone
+
+1. PCIP calls your BulkSms API with FORTRESS credentials
+2. BulkSms validates API key and checks balance
+3. BulkSms forwards to Onfon with proper credentials
+4. Onfon delivers SMS to recipient
+5. BulkSms deducts cost from FORTRESS balance
 
 =================================================
     SUPPORT

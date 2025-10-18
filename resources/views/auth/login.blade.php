@@ -22,7 +22,7 @@
             justify-content: center;
             padding: 20px;
             position: relative;
-            overflow: hidden;
+            overflow-y: auto;
         }
 
         /* Animated background elements */

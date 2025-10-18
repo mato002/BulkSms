@@ -10,12 +10,37 @@
 
 ## API Access
 
-**Client 1 API Key**: `bae377bc-0282-4fc9-a2a1-e338b18da77a`
+### Production Domain
+**URL**: https://crm.pradytecai.com
 
-**Usage Example:**
+### All API Clients
+
+| Client ID | Name | Sender ID | API Key |
+|-----------|------|-----------|---------|
+| 1 | PRADY_TECH | PRADY_TECH | `ea55cb72-a734-48b2-87a6-8d0ea1d397de` |
+| 2 | FORTRESS | FORTRESS | `USr4kTWk6nEcolzwiSTZJgMjZ0c4F2uh` |
+| 3 | FALLEY-MED | FALLEY-MED | `6d3d9896-6d4a-42dc-9bd6-675fd2f4e3f4` |
+| 4 | LOGIC-LINK | LOGIC-LINK | `45cd60bb-ff46-41ce-9920-d25306315c1b` |
+| 5 | BriskCredit | BriskCredit | `fa40c0fc-516b-4c21-8a5d-bf7fbe740a4e` |
+
+**Production Usage Example (FORTRESS):**
+```bash
+curl -X POST https://crm.pradytecai.com/api/2/messages/send \
+  -H "X-API-Key: USr4kTWk6nEcolzwiSTZJgMjZ0c4F2uh" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_id": 2,
+    "channel": "sms",
+    "recipient": "254728883160",
+    "sender": "FORTRESS",
+    "body": "Test message from production"
+  }'
+```
+
+**Local Testing Example (PRADY_TECH):**
 ```bash
 curl -X POST http://127.0.0.1:8000/api/1/messages/send \
-  -H "X-API-KEY: bae377bc-0282-4fc9-a2a1-e338b18da77a" \
+  -H "X-API-Key: ea55cb72-a734-48b2-87a6-8d0ea1d397de" \
   -H "Content-Type: application/json" \
   -d '{
     "client_id": 1,
@@ -40,10 +65,10 @@ curl -X POST http://127.0.0.1:8000/api/1/messages/send \
 
 Configure these in your Onfon portal to enable two-way communication:
 
-**Onfon Inbound (MO)**: `http://your-domain.com/api/webhooks/onfon/inbound` ⭐ **NEW - For receiving replies**  
-**Onfon DLR (MT Status)**: `http://your-domain.com/api/webhooks/onfon/dlr`  
-**WhatsApp**: `http://your-domain.com/api/webhooks/whatsapp`  
-**Email**: `http://your-domain.com/api/webhooks/email`
+**Onfon Inbound (MO)**: `https://crm.pradytecai.com/api/webhooks/onfon/inbound` ⭐ **For receiving replies**  
+**Onfon DLR (MT Status)**: `https://crm.pradytecai.com/api/webhooks/onfon/dlr`  
+**WhatsApp**: `https://crm.pradytecai.com/api/webhooks/whatsapp`  
+**Email**: `https://crm.pradytecai.com/api/webhooks/email`
 
 **For Local Testing**: Use ngrok or similar tunnel service
 
@@ -57,12 +82,18 @@ Configure these in your Onfon portal to enable two-way communication:
 
 ## Important Pages
 
+### Production (crm.pradytecai.com)
+- **Dashboard**: https://crm.pradytecai.com
+- **Settings**: https://crm.pradytecai.com/settings (View/Edit all credentials)
+- **Contacts**: https://crm.pradytecai.com/contacts
+- **Templates**: https://crm.pradytecai.com/templates
+- **Campaigns**: https://crm.pradytecai.com/campaigns
+- **Messages**: https://crm.pradytecai.com/messages
+
+### Local Development
 - **Dashboard**: http://127.0.0.1:8000
-- **Settings**: http://127.0.0.1:8000/settings (View/Edit all credentials)
+- **Settings**: http://127.0.0.1:8000/settings
 - **Contacts**: http://127.0.0.1:8000/contacts
-- **Templates**: http://127.0.0.1:8000/templates
-- **Campaigns**: http://127.0.0.1:8000/campaigns
-- **Messages**: http://127.0.0.1:8000/messages
 
 ## Security Notes
 
