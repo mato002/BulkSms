@@ -82,6 +82,7 @@
                 <li><a href="#webhooks">Webhooks</a></li>
                 <li><a href="#errors">Error Codes</a></li>
                 <li><a href="#code-examples">Code Examples</a></li>
+                <li><a href="#integration-guide">Integration Guide</a></li>
             </ul>
         </div>
 
@@ -102,19 +103,21 @@
                 <h3>Quick Start</h3>
                 <p>Follow these steps to send your first SMS:</p>
                 <ol style="margin-left: 20px; margin-top: 15px;">
-                    <li><strong>Get your API key</strong> - Contact your account manager</li>
-                    <li><strong>Choose your client ID</strong> - You'll receive this with your API key</li>
-                    <li><strong>Make your first API call</strong> - See example below</li>
+                    <li><strong>Get your API key</strong> - Go to Settings → Profile in your dashboard</li>
+                    <li><strong>Note your client ID</strong> - Usually 1 for the main account</li>
+                    <li><strong>Make your first API call</strong> - Use the unified messages endpoint</li>
                 </ol>
 
                 <div class="code-block">
-<pre>curl -X POST {{ config('app.url') }}/api/{client_id}/sms/send \
-  -H "X-API-Key: your-api-key-here" \
+<pre>curl -X POST {{ config('app.url') }}/api/1/messages/send \
+  -H "X-API-KEY: your-api-key-here" \
   -H "Content-Type: application/json" \
   -d '{
+    "client_id": 1,
+    "channel": "sms",
     "recipient": "254712345678",
-    "message": "Hello from our platform!",
-    "sender": "YOUR-SENDER-ID"
+    "sender": "YOUR-SENDER-ID",
+    "body": "Hello from our platform!"
   }'</pre>
                 </div>
             </section>
@@ -127,11 +130,11 @@
 
                 <h3>API Key Header</h3>
                 <div class="code-block">
-                    <pre>X-API-Key: your-api-key-here</pre>
+                    <pre>X-API-KEY: your-api-key-here</pre>
                 </div>
 
                 <div class="alert alert-warning">
-                    <strong>Keep it secret!</strong> Never expose your API key in client-side code or public repositories.
+                    <strong>Keep it secret!</strong> Never expose your API key in client-side code or public repositories. The header name is case-sensitive: use <code>X-API-KEY</code> (all caps).
                 </div>
 
                 <h3>Client ID</h3>
@@ -143,15 +146,19 @@
             <section id="sms" class="section">
                 <h2><i class="fas fa-sms"></i> SMS Endpoints</h2>
 
-                <!-- Send SMS -->
+                <div class="alert alert-info">
+                    <strong>💡 Recommended:</strong> Use the Unified Messages API (<code>/messages/send</code>) for simpler integration. It works for SMS, WhatsApp, and Email with consistent parameters.
+                </div>
+
+                <!-- Send SMS (Unified API) -->
                 <div class="endpoint">
-                    <h3>Send SMS</h3>
+                    <h3>Send SMS (Unified API - Recommended)</h3>
                     <div>
                         <span class="method post">POST</span>
-                        <span class="url">/api/{client_id}/sms/send</span>
+                        <span class="url">/api/{client_id}/messages/send</span>
                     </div>
 
-                    <p style="margin-top: 15px;">Send an SMS message to a single recipient.</p>
+                    <p style="margin-top: 15px;">Send an SMS message using the unified messaging API. This is the simplest and most flexible method.</p>
 
                     <h4 style="margin-top: 20px;">Request Parameters</h4>
                     <table class="param-table">
@@ -165,22 +172,34 @@
                         </thead>
                         <tbody>
                             <tr>
+                                <td><code>client_id</code></td>
+                                <td>integer</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Your client ID (usually 1)</td>
+                            </tr>
+                            <tr>
+                                <td><code>channel</code></td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Message channel: <code>sms</code>, <code>whatsapp</code>, or <code>email</code></td>
+                            </tr>
+                            <tr>
                                 <td><code>recipient</code></td>
                                 <td>string</td>
                                 <td><span class="badge required">Required</span></td>
                                 <td>Phone number in international format (e.g., 254712345678)</td>
                             </tr>
                             <tr>
-                                <td><code>message</code></td>
-                                <td>string</td>
-                                <td><span class="badge required">Required</span></td>
-                                <td>Message content (max 480 characters for concatenated SMS)</td>
-                            </tr>
-                            <tr>
                                 <td><code>sender</code></td>
                                 <td>string</td>
                                 <td><span class="badge required">Required</span></td>
                                 <td>Your approved sender ID (max 11 characters)</td>
+                            </tr>
+                            <tr>
+                                <td><code>body</code></td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Message content (max 480 characters for concatenated SMS)</td>
                             </tr>
                         </tbody>
                     </table>
@@ -195,30 +214,34 @@
 
                     <div id="curl-send" class="tab-content active">
                         <div class="code-block">
-<pre>curl -X POST {{ config('app.url') }}/api/1/sms/send \
-  -H "X-API-Key: sk_abc123xyz456" \
+<pre>curl -X POST {{ config('app.url') }}/api/1/messages/send \
+  -H "X-API-KEY: your-api-key-here" \
   -H "Content-Type: application/json" \
   -d '{
+    "client_id": 1,
+    "channel": "sms",
     "recipient": "254712345678",
-    "message": "Your appointment is tomorrow at 10am",
-    "sender": "HOSPITAL"
+    "sender": "HOSPITAL",
+    "body": "Your appointment is tomorrow at 10am"
   }'</pre>
                         </div>
                     </div>
 
                     <div id="php-send" class="tab-content">
                         <div class="code-block">
-<pre>$ch = curl_init('{{ config('app.url') }}/api/1/sms/send');
+<pre>$ch = curl_init('{{ config('app.url') }}/api/1/messages/send');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    'X-API-Key: sk_abc123xyz456',
+    'X-API-KEY: your-api-key-here',
     'Content-Type: application/json'
 ]);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+    'client_id' => 1,
+    'channel' => 'sms',
     'recipient' => '254712345678',
-    'message' => 'Your appointment is tomorrow at 10am',
-    'sender' => 'HOSPITAL'
+    'sender' => 'HOSPITAL',
+    'body' => 'Your appointment is tomorrow at 10am'
 ]));
 
 $response = curl_exec($ch);
@@ -232,17 +255,18 @@ print_r($result);</pre>
                     <div id="python-send" class="tab-content">
                         <div class="code-block">
 <pre>import requests
-import json
 
-url = '{{ config('app.url') }}/api/1/sms/send'
+url = '{{ config('app.url') }}/api/1/messages/send'
 headers = {
-    'X-API-Key': 'sk_abc123xyz456',
+    'X-API-KEY': 'your-api-key-here',
     'Content-Type': 'application/json'
 }
 data = {
+    'client_id': 1,
+    'channel': 'sms',
     'recipient': '254712345678',
-    'message': 'Your appointment is tomorrow at 10am',
-    'sender': 'HOSPITAL'
+    'sender': 'HOSPITAL',
+    'body': 'Your appointment is tomorrow at 10am'
 }
 
 response = requests.post(url, headers=headers, json=data)
@@ -255,13 +279,15 @@ print(result)</pre>
                         <div class="code-block">
 <pre>const axios = require('axios');
 
-axios.post('{{ config('app.url') }}/api/1/sms/send', {
+axios.post('{{ config('app.url') }}/api/1/messages/send', {
+  client_id: 1,
+  channel: 'sms',
   recipient: '254712345678',
-  message: 'Your appointment is tomorrow at 10am',
-  sender: 'HOSPITAL'
+  sender: 'HOSPITAL',
+  body: 'Your appointment is tomorrow at 10am'
 }, {
   headers: {
-    'X-API-Key': 'sk_abc123xyz456',
+    'X-API-KEY': 'your-api-key-here',
     'Content-Type': 'application/json'
   }
 })
@@ -277,12 +303,90 @@ axios.post('{{ config('app.url') }}/api/1/sms/send', {
                     <h4>Example Response (Success)</h4>
                     <div class="code-block">
 <pre>{
+  "id": 123,
   "status": "sent",
-  "message_id": "MSG-123456",
-  "recipient": "254712345678",
-  "cost": 1.00,
-  "balance": 1049.00,
-  "message": "SMS sent successfully"
+  "provider_message_id": "MSG-ABC123"
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Send Bulk SMS -->
+                <div class="endpoint">
+                    <h3>Send Bulk SMS (Alternative Method)</h3>
+                    <div>
+                        <span class="method post">POST</span>
+                        <span class="url">/api/{client_id}/sms/send</span>
+                    </div>
+
+                    <p style="margin-top: 15px;">Send SMS to multiple recipients at once. Note: This endpoint uses different parameter names.</p>
+
+                    <div class="alert alert-warning">
+                        <strong>⚠️ Important:</strong> This endpoint uses <code>recipients</code> (plural, array) not <code>recipient</code> (singular)!
+                    </div>
+
+                    <h4 style="margin-top: 20px;">Request Parameters</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>recipients</code></td>
+                                <td>array</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Array of phone numbers (max 1000 per request)</td>
+                            </tr>
+                            <tr>
+                                <td><code>message</code></td>
+                                <td>string</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Message content (max 160 characters per SMS)</td>
+                            </tr>
+                            <tr>
+                                <td><code>sender_id</code></td>
+                                <td>string</td>
+                                <td><span class="badge optional">Optional</span></td>
+                                <td>Sender ID (uses default if not provided)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Example Request</h4>
+                    <div class="code-block">
+<pre>curl -X POST {{ config('app.url') }}/api/1/sms/send \
+  -H "X-API-KEY: your-api-key-here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "recipients": ["254712345678", "254723456789"],
+    "message": "Bulk SMS notification",
+    "sender_id": "HOSPITAL"
+  }'</pre>
+                    </div>
+
+                    <h4>Example Response</h4>
+                    <div class="code-block">
+<pre>{
+  "status": "success",
+  "sent": 2,
+  "failed": 0,
+  "total_cost": 2.00,
+  "results": [
+    {
+      "recipient": "254712345678",
+      "status": "sent",
+      "message_id": "MSG-123"
+    },
+    {
+      "recipient": "254723456789",
+      "status": "sent",
+      "message_id": "MSG-124"
+    }
+  ]
 }</pre>
                     </div>
                 </div>
@@ -1114,6 +1218,554 @@ print(f"Balance: KES {balance['balance']}")
 topup_result = client.topup(1000, '254712345678')
 print(topup_result)</pre>
                 </div>
+            </section>
+
+            <!-- CLIENT INTEGRATION GUIDE -->
+            <section id="integration-guide" class="section">
+                <h2><i class="fas fa-plug"></i> Client Integration Guide</h2>
+                
+                <div class="alert alert-info">
+                    <strong>For Organizations Integrating with Our API:</strong> This guide provides everything you need to integrate SMS sending into your application using our API.
+                </div>
+
+                <h3>📋 Your API Credentials</h3>
+                <p>You will receive these credentials from your account manager:</p>
+                <div class="code-block">
+<pre>API Base URL:  {{ config('app.url') }}/api
+Client ID:     1 (or your assigned ID)
+API Key:       Your unique API key
+Sender ID:     Your approved sender name</pre>
+                </div>
+
+                <div class="alert alert-warning">
+                    <strong>⚠️ Security:</strong> Never commit your API key to version control or share it publicly. Store it securely in environment variables.
+                </div>
+
+                <h3>🚀 Quick Start Configuration</h3>
+                
+                <div class="tabs">
+                    <button class="tab active" onclick="showTab(event, 'env-setup')">Environment Setup</button>
+                    <button class="tab" onclick="showTab(event, 'php-class')">PHP Class</button>
+                    <button class="tab" onclick="showTab(event, 'laravel-service')">Laravel Service</button>
+                    <button class="tab" onclick="showTab(event, 'python-class')">Python Class</button>
+                    <button class="tab" onclick="showTab(event, 'nodejs-class')">Node.js Class</button>
+                </div>
+
+                <!-- Environment Setup Tab -->
+                <div id="env-setup" class="tab-content active">
+                    <h4>Add to your .env file:</h4>
+                    <div class="code-block">
+<pre># SMS API Configuration
+SMS_API_URL={{ config('app.url') }}/api
+SMS_CLIENT_ID=1
+SMS_API_KEY=your_api_key_here
+SMS_SENDER_ID=YOUR_SENDER</pre>
+                    </div>
+                </div>
+
+                <!-- PHP Class Tab -->
+                <div id="php-class" class="tab-content">
+                    <h4>Complete PHP Integration Class:</h4>
+                    <div class="code-block">
+<pre>&lt;?php
+
+class SMSClient {
+    private $apiUrl;
+    private $clientId;
+    private $apiKey;
+    private $senderId;
+
+    public function __construct() {
+        $this->apiUrl = getenv('SMS_API_URL') ?: '{{ config('app.url') }}/api';
+        $this->clientId = getenv('SMS_CLIENT_ID') ?: '1';
+        $this->apiKey = getenv('SMS_API_KEY');
+        $this->senderId = getenv('SMS_SENDER_ID');
+    }
+
+    /**
+     * Send SMS message
+     */
+    public function sendSMS($recipient, $message) {
+        $url = "{$this->apiUrl}/{$this->clientId}/messages/send";
+        
+        $data = [
+            'channel' => 'sms',
+            'recipient' => $recipient,
+            'body' => $message,
+            'sender' => $this->senderId
+        ];
+
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'X-API-Key: ' . $this->apiKey,
+            'Content-Type: application/json',
+        ]);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode === 200) {
+            return json_decode($response, true);
+        } else {
+            throw new Exception("SMS Error: " . $response);
+        }
+    }
+
+    /**
+     * Check account balance
+     */
+    public function checkBalance() {
+        $url = "{$this->apiUrl}/{$this->clientId}/client/balance";
+        
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'X-API-Key: ' . $this->apiKey,
+        ]);
+
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        return json_decode($response, true);
+    }
+
+    /**
+     * Get SMS history
+     */
+    public function getHistory($page = 1, $status = 'all') {
+        $url = "{$this->apiUrl}/{$this->clientId}/sms/history?page={$page}&status={$status}";
+        
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'X-API-Key: ' . $this->apiKey,
+        ]);
+
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        return json_decode($response, true);
+    }
+}
+
+// Usage Example
+try {
+    $sms = new SMSClient();
+    
+    // Send SMS
+    $result = $sms->sendSMS('254712345678', 'Hello from your app!');
+    echo "Message sent! ID: " . $result['data']['id'] . "\n";
+    
+    // Check Balance
+    $balance = $sms->checkBalance();
+    echo "Balance: KSH " . $balance['data']['balance'] . "\n";
+    
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
+}
+?&gt;</pre>
+                    </div>
+                </div>
+
+                <!-- Laravel Service Tab -->
+                <div id="laravel-service" class="tab-content">
+                    <h4>Laravel Service Class (app/Services/SmsService.php):</h4>
+                    <div class="code-block">
+<pre>&lt;?php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+
+class SmsService
+{
+    private $apiUrl;
+    private $clientId;
+    private $apiKey;
+    private $senderId;
+
+    public function __construct()
+    {
+        $this->apiUrl = config('services.sms.api_url');
+        $this->clientId = config('services.sms.client_id');
+        $this->apiKey = config('services.sms.api_key');
+        $this->senderId = config('services.sms.sender_id');
+    }
+
+    public function send($recipient, $message)
+    {
+        try {
+            $response = Http::withHeaders([
+                'X-API-Key' => $this->apiKey,
+                'Content-Type' => 'application/json',
+            ])->post("{$this->apiUrl}/{$this->clientId}/messages/send", [
+                'channel' => 'sms',
+                'recipient' => $recipient,
+                'body' => $message,
+                'sender' => $this->senderId,
+            ]);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            throw new \Exception('SMS sending failed: ' . $response->body());
+
+        } catch (\Exception $e) {
+            Log::error('SMS Error: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    public function checkBalance()
+    {
+        $response = Http::withHeaders([
+            'X-API-Key' => $this->apiKey,
+        ])->get("{$this->apiUrl}/{$this->clientId}/client/balance");
+
+        return $response->json();
+    }
+}
+?&gt;</pre>
+                    </div>
+
+                    <h4>Add to config/services.php:</h4>
+                    <div class="code-block">
+<pre>'sms' => [
+    'api_url' => env('SMS_API_URL', '{{ config('app.url') }}/api'),
+    'client_id' => env('SMS_CLIENT_ID', '1'),
+    'api_key' => env('SMS_API_KEY'),
+    'sender_id' => env('SMS_SENDER_ID'),
+],</pre>
+                    </div>
+
+                    <h4>Usage in Controller:</h4>
+                    <div class="code-block">
+<pre>use App\Services\SmsService;
+
+class NotificationController extends Controller
+{
+    protected $sms;
+
+    public function __construct(SmsService $sms)
+    {
+        $this->sms = $sms;
+    }
+
+    public function sendNotification()
+    {
+        try {
+            $result = $this->sms->send('254712345678', 'Your verification code is 1234');
+            return response()->json(['success' => true, 'data' => $result]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+}</pre>
+                    </div>
+                </div>
+
+                <!-- Python Class Tab -->
+                <div id="python-class" class="tab-content">
+                    <h4>Complete Python Integration Class:</h4>
+                    <div class="code-block">
+<pre>import requests
+import os
+from typing import Dict
+
+class SMSClient:
+    def __init__(self):
+        self.api_url = os.getenv('SMS_API_URL', '{{ config('app.url') }}/api')
+        self.client_id = os.getenv('SMS_CLIENT_ID', '1')
+        self.api_key = os.getenv('SMS_API_KEY')
+        self.sender_id = os.getenv('SMS_SENDER_ID')
+        
+        self.headers = {
+            'X-API-Key': self.api_key,
+            'Content-Type': 'application/json'
+        }
+    
+    def send_sms(self, recipient: str, message: str) -> Dict:
+        """Send SMS message"""
+        url = f'{self.api_url}/{self.client_id}/messages/send'
+        
+        data = {
+            'channel': 'sms',
+            'recipient': recipient,
+            'body': message,
+            'sender': self.sender_id
+        }
+        
+        response = requests.post(url, headers=self.headers, json=data)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"SMS Error: {response.text}")
+    
+    def check_balance(self) -> Dict:
+        """Check account balance"""
+        url = f'{self.api_url}/{self.client_id}/client/balance'
+        response = requests.get(url, headers=self.headers)
+        return response.json()
+    
+    def get_history(self, page: int = 1, status: str = 'all') -> Dict:
+        """Get SMS history"""
+        url = f'{self.api_url}/{self.client_id}/sms/history'
+        params = {'page': page, 'status': status}
+        response = requests.get(url, headers=self.headers, params=params)
+        return response.json()
+
+# Usage Example
+if __name__ == '__main__':
+    sms = SMSClient()
+    
+    try:
+        # Send SMS
+        result = sms.send_sms('254712345678', 'Hello from Python!')
+        print(f"Message sent! ID: {result['data']['id']}")
+        
+        # Check Balance
+        balance = sms.check_balance()
+        print(f"Balance: KSH {balance['data']['balance']}")
+        
+    except Exception as e:
+        print(f"Error: {e}")</pre>
+                    </div>
+                </div>
+
+                <!-- Node.js Class Tab -->
+                <div id="nodejs-class" class="tab-content">
+                    <h4>Complete Node.js Integration Class:</h4>
+                    <div class="code-block">
+<pre>const axios = require('axios');
+
+class SMSClient {
+    constructor() {
+        this.apiUrl = process.env.SMS_API_URL || '{{ config('app.url') }}/api';
+        this.clientId = process.env.SMS_CLIENT_ID || '1';
+        this.apiKey = process.env.SMS_API_KEY;
+        this.senderId = process.env.SMS_SENDER_ID;
+        
+        this.headers = {
+            'X-API-Key': this.apiKey,
+            'Content-Type': 'application/json'
+        };
+    }
+
+    async sendSMS(recipient, message) {
+        try {
+            const response = await axios.post(
+                `${this.apiUrl}/${this.clientId}/messages/send`,
+                {
+                    channel: 'sms',
+                    recipient: recipient,
+                    body: message,
+                    sender: this.senderId
+                },
+                { headers: this.headers }
+            );
+            
+            return response.data;
+        } catch (error) {
+            throw new Error(`SMS Error: ${error.response?.data || error.message}`);
+        }
+    }
+
+    async checkBalance() {
+        try {
+            const response = await axios.get(
+                `${this.apiUrl}/${this.clientId}/client/balance`,
+                { headers: this.headers }
+            );
+            return response.data;
+        } catch (error) {
+            throw new Error(`Balance Check Error: ${error.message}`);
+        }
+    }
+
+    async getHistory(page = 1, status = 'all') {
+        try {
+            const response = await axios.get(
+                `${this.apiUrl}/${this.clientId}/sms/history`,
+                {
+                    headers: this.headers,
+                    params: { page, status }
+                }
+            );
+            return response.data;
+        } catch (error) {
+            throw new Error(`History Error: ${error.message}`);
+        }
+    }
+}
+
+// Usage Example
+(async () => {
+    const sms = new SMSClient();
+    
+    try {
+        // Send SMS
+        const result = await sms.sendSMS('254712345678', 'Hello from Node.js!');
+        console.log(`Message sent! ID: ${result.data.id}`);
+        
+        // Check Balance
+        const balance = await sms.checkBalance();
+        console.log(`Balance: KSH ${balance.data.balance}`);
+        
+    } catch (error) {
+        console.error('Error:', error.message);
+    }
+})();
+
+module.exports = SMSClient;</pre>
+                    </div>
+                </div>
+
+                <h3>🔌 cURL Quick Test Commands</h3>
+                
+                <h4>1. Test API Health (No Auth Required):</h4>
+                <div class="code-block">
+<pre>curl {{ config('app.url') }}/api/health</pre>
+                </div>
+
+                <h4>2. Send SMS:</h4>
+                <div class="code-block">
+<pre>curl -X POST {{ config('app.url') }}/api/1/messages/send \
+  -H "X-API-Key: your_api_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "channel": "sms",
+    "recipient": "254712345678",
+    "body": "Hello from API!",
+    "sender": "YOUR_SENDER"
+  }'</pre>
+                </div>
+
+                <h4>3. Check Balance:</h4>
+                <div class="code-block">
+<pre>curl -H "X-API-Key: your_api_key_here" \
+  {{ config('app.url') }}/api/1/client/balance</pre>
+                </div>
+
+                <h4>4. Get SMS History:</h4>
+                <div class="code-block">
+<pre>curl -H "X-API-Key: your_api_key_here" \
+  "{{ config('app.url') }}/api/1/sms/history?page=1&status=sent"</pre>
+                </div>
+
+                <h3>💰 Pricing & Billing</h3>
+                <table class="param-table">
+                    <thead>
+                        <tr>
+                            <th>Message Length</th>
+                            <th>Units</th>
+                            <th>Cost (KSH 1.00/unit)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1-160 characters</td>
+                            <td>1 unit</td>
+                            <td>KSH 1.00</td>
+                        </tr>
+                        <tr>
+                            <td>161-320 characters</td>
+                            <td>2 units</td>
+                            <td>KSH 2.00</td>
+                        </tr>
+                        <tr>
+                            <td>321-480 characters</td>
+                            <td>3 units</td>
+                            <td>KSH 3.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3>🔒 Security Best Practices</h3>
+                <div class="alert alert-warning">
+                    <ul style="margin-left: 20px;">
+                        <li><strong>Environment Variables:</strong> Always store API keys in environment variables, never hardcode</li>
+                        <li><strong>HTTPS Only:</strong> Use <code>https://</code> not <code>http://</code> in production</li>
+                        <li><strong>Phone Format:</strong> Always use international format: <code>254XXXXXXXXX</code></li>
+                        <li><strong>.gitignore:</strong> Add <code>.env</code> to your <code>.gitignore</code> file</li>
+                        <li><strong>Error Handling:</strong> Implement proper try-catch blocks and logging</li>
+                        <li><strong>Rate Limiting:</strong> Monitor your API usage and implement backoff strategies</li>
+                    </ul>
+                </div>
+
+                <h3>📊 API Response Format</h3>
+                <h4>Success Response:</h4>
+                <div class="code-block">
+<pre>{
+  "status": "success",
+  "message": "Message queued for sending",
+  "data": {
+    "id": 123,
+    "channel": "sms",
+    "recipient": "254712345678",
+    "status": "queued",
+    "cost": 1.00
+  }
+}</pre>
+                </div>
+
+                <h4>Error Response:</h4>
+                <div class="code-block">
+<pre>{
+  "status": "error",
+  "message": "Insufficient balance",
+  "errors": []
+}</pre>
+                </div>
+
+                <h3>🧪 Testing Checklist</h3>
+                <div class="alert alert-success">
+                    <strong>Before going live, test:</strong>
+                    <ol style="margin-left: 20px; margin-top: 10px;">
+                        <li>✅ API health check works</li>
+                        <li>✅ Authentication with your API key works</li>
+                        <li>✅ Can check your balance</li>
+                        <li>✅ Can send test SMS successfully</li>
+                        <li>✅ SMS is actually delivered</li>
+                        <li>✅ Balance is deducted correctly</li>
+                        <li>✅ Error handling works (try invalid API key)</li>
+                        <li>✅ History shows sent messages</li>
+                    </ol>
+                </div>
+
+                <h3>❗ Common Issues & Solutions</h3>
+                <table class="param-table">
+                    <thead>
+                        <tr>
+                            <th>Issue</th>
+                            <th>Solution</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>"Invalid API key"</td>
+                            <td>Verify API key is correct and header name is exactly <code>X-API-Key</code></td>
+                        </tr>
+                        <tr>
+                            <td>"Insufficient balance"</td>
+                            <td>Check your balance and contact support to add more units</td>
+                        </tr>
+                        <tr>
+                            <td>"Message failed"</td>
+                            <td>Verify phone number format (254XXXXXXXXX) and sender ID is active</td>
+                        </tr>
+                        <tr>
+                            <td>"Rate limit exceeded"</td>
+                            <td>Implement exponential backoff or contact support to upgrade tier</td>
+                        </tr>
+                    </tbody>
+                </table>
             </section>
 
             <!-- SUPPORT -->

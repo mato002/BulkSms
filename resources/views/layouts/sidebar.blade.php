@@ -41,6 +41,17 @@
     <i class="bi bi-code-square"></i>
     <span>API Documentation</span>
 </a>
+<a href="{{ route('api-monitor.index') }}" class="sidebar-nav-item {{ request()->routeIs('api-monitor.*') ? 'active' : '' }}">
+    <i class="bi bi-activity"></i>
+    <span>API Monitor</span>
+    @php
+        $todayRequests = \App\Models\ApiLog::whereDate('created_at', today())->count();
+        $failedToday = \App\Models\ApiLog::whereDate('created_at', today())->where('success', false)->count();
+    @endphp
+    @if($todayRequests > 0)
+        <span class="badge bg-{{ $failedToday > 0 ? 'danger' : 'success' }} ms-auto">{{ $todayRequests }}</span>
+    @endif
+</a>
 
 <div class="nav-section-title mt-4">System</div>
 <a href="{{ route('wallet.index') }}" class="sidebar-nav-item {{ request()->routeIs('wallet.*') ? 'active' : '' }}">

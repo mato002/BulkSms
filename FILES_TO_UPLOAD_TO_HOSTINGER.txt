@@ -1,0 +1,163 @@
+╔═══════════════════════════════════════════════════════════════╗
+║         FILES TO UPLOAD/EDIT ON HOSTINGER                     ║
+╚═══════════════════════════════════════════════════════════════╝
+
+CRITICAL CHANGE (Required):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ .env file - EDIT ON HOSTINGER (don't upload, edit in place)
+
+   Change: APP_URL=http://localhost
+   To:     APP_URL=https://crm.pradytecai.com
+   
+   Then run: php artisan config:clear
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+OPTIONAL TEST FILES (Helpful but not required):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Diagnostic Tools:
+   - test_webhook_reply.php
+   - debug_inbox_messages.php
+   - test_mpesa_detailed.php
+   - check_mpesa_config.php
+   - manual_credit_user.php
+
+📚 Documentation:
+   - INBOX_ISSUE_SOLVED.md
+   - INBOX_REPLY_FIX_GUIDE.md
+   - MPESA_CURRENT_STATUS.md
+   - MPESA_PRODUCTION_COMPLETE_GUIDE.md
+   - MPESA_QUICK_REFERENCE.md
+   - MPESA_EXPLANATION.txt
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+CORE APPLICATION FILES (Already on Hostinger):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ app/Services/UrlShortenerService.php (already there)
+✅ app/Http/Controllers/PublicReplyController.php (already there)
+✅ app/Http/Controllers/InboxController.php (already there)
+✅ app/Http/Controllers/WebhookController.php (already there)
+✅ resources/views/inbox/chat.blade.php (already there)
+
+These don't need uploading - they're part of your existing codebase!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+STEP-BY-STEP GUIDE:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Method 1: Edit .env via Hostinger File Manager
+────────────────────────────────────────────────────────────────
+1. Login to Hostinger control panel
+2. Go to File Manager
+3. Navigate to: public_html/BulkSms (or your folder)
+4. Find .env file
+5. Right-click → Edit
+6. Find line: APP_URL=http://localhost
+7. Change to: APP_URL=https://crm.pradytecai.com
+8. Save file
+9. Open SSH terminal (Hostinger has one in control panel)
+10. Run: cd ~/public_html/BulkSms
+11. Run: php artisan config:clear
+
+
+Method 2: Edit .env via FTP
+────────────────────────────────────────────────────────────────
+1. Connect via FTP (FileZilla, WinSCP, etc.)
+2. Navigate to BulkSms folder
+3. Download .env file
+4. Edit locally: APP_URL=https://crm.pradytecai.com
+5. Upload back to server
+6. SSH to server
+7. Run: php artisan config:clear
+
+
+Method 3: Edit .env via SSH (Fastest)
+────────────────────────────────────────────────────────────────
+1. SSH to Hostinger
+2. cd ~/public_html/BulkSms
+3. nano .env
+4. Find APP_URL line, change to: https://crm.pradytecai.com
+5. Press Ctrl+X, then Y, then Enter to save
+6. Run: php artisan config:clear
+
+
+UPLOAD OPTIONAL FILES (if you want them):
+────────────────────────────────────────────────────────────────
+Via File Manager:
+1. Login to Hostinger control panel
+2. File Manager → BulkSms folder
+3. Click Upload button
+4. Select all the .php and .md files listed above
+5. Upload
+
+Via FTP:
+1. Connect with FTP client
+2. Navigate to BulkSms folder
+3. Drag and drop files from local to server
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+VERIFY IT'S WORKING:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+After editing .env:
+
+1. Send a test SMS from your inbox
+2. Check the message content
+3. Should see: "Reply: https://crm.pradytecai.com/x/abc123"
+   (NOT localhost)
+4. Click the link
+5. Fill out reply form
+6. Submit
+7. Check inbox - reply should appear! ✅
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+IMPORTANT NOTES:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️  DO NOT upload your local .env file!
+    It contains localhost settings. Edit the one on server instead.
+
+✅  The application code is already correct on Hostinger
+    No need to upload any app/ or resources/ files
+
+✅  Web link replies work right now
+    As soon as you change APP_URL
+
+⏳  Direct SMS replies need Onfon webhook setup
+    (That's a separate configuration on Onfon side)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+
+QUICK CHECKLIST:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+□ Edit .env on Hostinger (change APP_URL)
+□ Run: php artisan config:clear
+□ Test: Send message from inbox
+□ Verify: URL shows crm.pradytecai.com (not localhost)
+□ Test: Click reply link
+□ Verify: Reply appears in inbox
+□ (Optional) Upload test files
+□ (Later) Configure Onfon webhooks for direct SMS replies
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Last Updated: October 18, 2025
+Contact: Check INBOX_ISSUE_SOLVED.md for more details
+
+
+

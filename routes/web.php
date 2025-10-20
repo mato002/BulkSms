@@ -144,6 +144,13 @@ Route::middleware(['auth'])->group(function () {
     // Search
     Route::get('/search', [App\Http\Controllers\SearchController::class, 'showResults'])->name('search.results');
     Route::get('/api/search', [App\Http\Controllers\SearchController::class, 'search'])->name('search.api');
+    
+    // API Monitor
+    Route::get('/api-monitor', [App\Http\Controllers\ApiMonitorController::class, 'index'])->name('api-monitor.index');
+    Route::get('/api-monitor/{id}', [App\Http\Controllers\ApiMonitorController::class, 'show'])->name('api-monitor.show');
+    Route::get('/api-monitor-stats', [App\Http\Controllers\ApiMonitorController::class, 'statistics'])->name('api-monitor.statistics');
+    Route::get('/api-monitor-activity', [App\Http\Controllers\ApiMonitorController::class, 'activity'])->name('api-monitor.activity');
+    Route::post('/api-monitor/cleanup', [App\Http\Controllers\ApiMonitorController::class, 'cleanup'])->name('api-monitor.cleanup');
 
     Route::resource('contacts', ContactController::class);
     Route::post('contacts/import', [ContactController::class, 'import'])->name('contacts.import');

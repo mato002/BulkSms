@@ -13,6 +13,44 @@
                 <p class="text-muted mb-0">Add funds to your wallet using M-Pesa or manual payment</p>
             </div>
 
+            <!-- Flash Messages -->
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle me-2"></i>
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+
+            @if(session('error'))
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    {{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+
+            @if(session('info'))
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>
+                    {{ session('info') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+
+            @if($errors->any())
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Please fix the following errors:</strong>
+                    <ul class="mb-0 mt-2">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+
             <!-- Current Balance Card -->
             <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                 <div class="card-body text-white">
@@ -258,6 +296,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const unitsPreview = document.getElementById('unitsPreview');
     const unitsCount = document.getElementById('unitsCount');
     const submitBtn = document.getElementById('submitBtn');
+
+    // Reset button state if page reloaded with errors
+    submitBtn.disabled = false;
+    if (mpesaRadio.checked) {
+        submitBtn.innerHTML = '<i class="bi bi-phone"></i> Proceed with M-Pesa';
+    } else {
+        submitBtn.innerHTML = '<i class="bi bi-person-check"></i> Submit Manual Request';
+    }
 
     // Unit cost (KES per SMS)
     const unitCost = 0.75;

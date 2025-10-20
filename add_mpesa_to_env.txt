@@ -1,0 +1,43 @@
+=================================================
+  ADD THESE TO YOUR .env FILE
+=================================================
+
+Location: C:\xampp\htdocs\BulkSms\.env
+
+If .env doesn't exist, copy from .env.example
+
+Add these lines at the end of .env file:
+
+# M-Pesa Configuration (SANDBOX - Testing Only)
+MPESA_ENV=sandbox
+MPESA_CONSUMER_KEY=Yt36YTWRLf1CL3RW47GidbAXtW1OcO4m7U5VuvA6x84BdoQV
+MPESA_CONSUMER_SECRET=p3o13LwjC48GjBGdvcnpptuQc90OSlHJvBeTwkXyJBNQFGJQnqN5gws4gf6frGdh
+MPESA_PASSKEY=bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919
+MPESA_SHORTCODE=174379
+MPESA_TRANSACTION_TYPE=CustomerPayBillOnline
+MPESA_CALLBACK_URL=https://crm.pradytecai.com/api/webhooks/mpesa/callback
+MPESA_TIMEOUT_URL=https://crm.pradytecai.com/api/webhooks/mpesa/timeout
+
+After adding, run: php artisan config:clear
+
+=================================================
+  IMPORTANT NOTE
+=================================================
+
+⚠️  These are SANDBOX credentials!
+
+Sandbox limitations:
+- STK prompts DO NOT go to real phones (254728883160)
+- Only works with M-Pesa Sandbox App
+- Test environment only
+
+To receive real M-Pesa prompts on actual phones:
+1. Apply for production API at developer.safaricom.co.ke
+2. Get production credentials
+3. Change MPESA_ENV=production
+4. Update with production keys
+
+=================================================
+
+
+
