@@ -232,4 +232,54 @@ class CampaignController extends Controller
 
         return redirect()->route('campaigns.show', $id)->with('success', "Campaign sent! {$sent} succeeded, {$failed} failed.");
     }
+
+    /**
+     * Send a scheduled campaign (called by job)
+     */
+    public function sendScheduledCampaign(Campaign $campaign)
+    {
+        $dispatcher = app(MessageDispatcher::class);
+        
+        $recipients = $campaign->recipients ?? [];
+        $sent = 0;
+        $failed = 0;
+
+        foreach ($recipients as $recipient) {
+            try {
+                $outbound = new OutboundMessage(
+                    clientId: $campaign->client_id,
+                    channel: $campaign->channel ?? 'sms',
+                    recipient: $recipient,
+                    sender: $campaign->sender_id,
+                    body: $campaign->message,
+                    templateId: $campaign->template_id ?? null
+                );
+
+                $dispatcher->dispatch($outbound);
+                $sent++;
+            } catch (\Throwable $e) {
+                \Log::error('Scheduled campaign message failed', [
+                    'campaign_id' => $campaign->id,
+                    'recipient' => $recipient,
+                    'error' => $e->getMessage()
+                ]);
+                $failed++;
+            }
+        }
+
+        $campaign->update([
+            'status' => 'sent',
+            'sent_at' => now(),
+            'sent_count' => $sent,
+            'failed_count' => $failed,
+        ]);
+
+        \Log::info('Scheduled campaign sent', [
+            'campaign_id' => $campaign->id,
+            'sent' => $sent,
+            'failed' => $failed,
+        ]);
+
+        return ['sent' => $sent, 'failed' => $failed];
+    }
 }

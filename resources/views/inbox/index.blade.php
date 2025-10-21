@@ -167,7 +167,7 @@
         </div>
         @if($conversations->hasPages())
         <div class="modern-card-footer">
-            {{ $conversations->appends(request()->query())->links() }}
+            {{ $conversations->appends(request()->query())->links('vendor.pagination.simple') }}
         </div>
         @endif
     </div>

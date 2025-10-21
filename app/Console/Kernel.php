@@ -37,6 +37,26 @@ class Kernel extends ConsoleKernel
                  ->everyFifteenMinutes()
                  ->withoutOverlapping()
                  ->runInBackground();
+
+        // Process scheduled campaigns (NEW - for scheduled messages feature)
+        $schedule->command('campaigns:process-scheduled')
+                 ->everyMinute()
+                 ->withoutOverlapping();
+
+        // Check for low balances and send alerts (NEW - for smart notifications)
+        $schedule->command('balance:check-low')
+                 ->hourly()
+                 ->withoutOverlapping();
+
+        // Auto-refresh Onfon balance every 15 minutes and send SMS alerts
+        $schedule->command('onfon:refresh-balance')
+                 ->everyFifteenMinutes()
+                 ->withoutOverlapping();
+
+        // Clean up old API logs (older than 30 days)
+        $schedule->call(function () {
+            \App\Models\ApiLog::where('created_at', '<', now()->subDays(30))->delete();
+        })->daily()->at('03:00');
     }
 
     /**

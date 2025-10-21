@@ -6,6 +6,7 @@ use App\Models\Sms;
 use App\Models\Client;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Services\SmsSegmenter;
 
 class SmsService
 {
@@ -26,13 +27,20 @@ class SmsService
     public function sendSms(Client $client, string $recipient, string $message, string $senderId): array
     {
         try {
-            // Check client balance
-            if (!$client->hasSufficientBalance(0.75)) {
+            // Calculate segments and cost
+            $seg = SmsSegmenter::segmentInfo($message);
+            $unitPrice = (float) ($client->price_per_unit ?? 1.00); // default 1 KSH per SMS part
+            $cost = round($unitPrice * $seg['segments'], 2);
+
+            // Check client balance for total cost
+            if (!$client->hasSufficientBalance($cost)) {
                 return [
                     'status' => 'failed',
                     'message' => 'Insufficient balance',
                     'recipient' => $recipient,
-                    'cost' => 0
+                    'cost' => 0,
+                    'segments' => $seg['segments'],
+                    'encoding' => $seg['encoding'],
                 ];
             }
 
@@ -43,7 +51,7 @@ class SmsService
                 'message' => $message,
                 'sender_id' => $senderId,
                 'status' => 'pending',
-                'cost' => 0.75
+                'cost' => $cost
             ]);
 
             // Send to gateway
@@ -51,13 +59,16 @@ class SmsService
 
             if ($response['status'] === 200) {
                 $sms->markAsSent($response['message_id']);
-                $client->deductBalance(0.75);
+                $client->deductBalance($cost);
                 
                 return [
                     'status' => 'success',
                     'message_id' => $response['message_id'],
                     'recipient' => $recipient,
-                    'cost' => 0.75
+                    'cost' => $cost,
+                    'segments' => $seg['segments'],
+                    'encoding' => $seg['encoding'],
+                    'length' => $seg['length'],
                 ];
             } else {
                 $sms->markAsFailed();
@@ -66,7 +77,9 @@ class SmsService
                     'status' => 'failed',
                     'message' => $response['message'] ?? 'SMS sending failed',
                     'recipient' => $recipient,
-                    'cost' => 0
+                    'cost' => 0,
+                    'segments' => $seg['segments'],
+                    'encoding' => $seg['encoding'],
                 ];
             }
         } catch (\Exception $e) {

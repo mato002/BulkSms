@@ -12,6 +12,10 @@ return [
 
     'default_gateway' => env('SMS_DEFAULT_GATEWAY', 'mobitech'),
 
+    // Low balance alert configuration
+    'low_balance_threshold' => env('SMS_LOW_BALANCE_THRESHOLD', 1000),
+    'admin_phone' => env('SMS_ADMIN_PHONE', '254722295194'),
+
     'gateways' => [
         'mobitech' => [
             'url' => env('SMS_GATEWAY_URL', 'http://bulksms.mobitechtechnologies.com/api/sendsms'),

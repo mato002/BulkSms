@@ -93,6 +93,22 @@ class Client extends Model
     }
 
     /**
+     * Get tags for the client.
+     */
+    public function tags(): HasMany
+    {
+        return $this->hasMany(Tag::class);
+    }
+
+    /**
+     * Get notification settings for the client.
+     */
+    public function notificationSettings()
+    {
+        return $this->hasOne(NotificationSetting::class);
+    }
+
+    /**
      * Get balance in units (balance ÷ price_per_unit)
      */
     public function getBalanceInUnits(): float

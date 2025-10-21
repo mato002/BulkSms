@@ -14,6 +14,10 @@
                     <p class="page-subtitle">View and manage all your message conversations</p>
                 </div>
             </div>
+            <a href="{{ route('messages.all') }}" class="btn-primary-modern">
+                <i class="bi bi-envelope-paper"></i>
+                <span>All Messages & Earnings</span>
+            </a>
         </div>
     </div>
 
@@ -207,7 +211,7 @@
         </div>
         @if($conversations->hasPages())
         <div class="modern-card-footer">
-            {{ $conversations->links() }}
+            {{ $conversations->links('vendor.pagination.simple') }}
         </div>
         @endif
     </div>

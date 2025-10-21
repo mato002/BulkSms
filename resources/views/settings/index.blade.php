@@ -1,79 +1,102 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <div class="mb-4">
-        <h1><i class="bi bi-gear-fill me-2"></i>Settings</h1>
+<div class="modern-page-container">
+    <!-- Page Header -->
+    <div class="modern-page-header">
+        <div class="page-header-content">
+            <div class="page-title-wrapper">
+                <div class="page-icon-wrapper">
+                    <i class="bi bi-gear-fill"></i>
+                </div>
+                <div>
+                    <h1 class="page-main-title">Settings</h1>
+                    <p class="page-subtitle">Manage your account settings and preferences</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn-secondary-modern" onclick="location.reload()">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    <span>Refresh</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>
             {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
 
-    <!-- Client Information -->
-    <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="bi bi-building me-2"></i>Client Information</h5>
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
-        <div class="card-body">
+    @endif
+
+    <!-- Client Information -->
+    <div class="modern-card mb-4">
+        <div class="modern-card-header">
+            <h3 class="modern-card-title">
+                <i class="bi bi-building me-2"></i>Client Information
+            </h3>
+        </div>
+        <div class="modern-card-body">
             <form action="{{ route('settings.client.update') }}" method="POST">
                 @csrf
-                <div class="row">
+                <div class="row g-3">
                     <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="name" class="form-label">Company Name</label>
-                            <input type="text" class="form-control" id="name" name="name" value="{{ $client->name ?? '' }}" required>
-                        </div>
+                        <label for="name" class="form-label fw-semibold">Company Name</label>
+                        <input type="text" class="modern-input" id="name" name="name" value="{{ $client->name ?? '' }}" required>
                     </div>
                     <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="contact" class="form-label">Contact</label>
-                            <input type="text" class="form-control" id="contact" name="contact" value="{{ $client->contact ?? '' }}" required>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="sender_id" class="form-label">Default Sender ID</label>
-                            <input type="text" class="form-control" id="sender_id" name="sender_id" value="{{ $client->sender_id ?? '' }}" required>
-                        </div>
+                        <label for="contact" class="form-label fw-semibold">Contact</label>
+                        <input type="text" class="modern-input" id="contact" name="contact" value="{{ $client->contact ?? '' }}" required>
                     </div>
                     <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Balance</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="text" class="form-control" value="{{ number_format($client->balance ?? 0, 2) }}" readonly>
-                            </div>
-                        </div>
+                        <label for="sender_id" class="form-label fw-semibold">Default Sender ID</label>
+                        <input type="text" class="modern-input" id="sender_id" name="sender_id" value="{{ $client->sender_id ?? '' }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Balance</label>
+                        <input type="text" class="modern-input" value="$ {{ number_format($client->balance ?? 0, 2) }}" readonly>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary">Update Client Info</button>
+                <div class="mt-3">
+                    <button type="submit" class="btn-primary-modern">
+                        <i class="bi bi-save"></i>
+                        <span>Update Client Info</span>
+                    </button>
+                </div>
             </form>
         </div>
     </div>
 
     <!-- API Keys -->
-    <div class="card mb-4">
-        <div class="card-header bg-success text-white">
-            <h5 class="mb-0"><i class="bi bi-key me-2"></i>API Keys & Authentication</h5>
+    <div class="modern-card mb-4">
+        <div class="modern-card-header">
+            <h3 class="modern-card-title">
+                <i class="bi bi-key me-2"></i>API Keys & Authentication
+            </h3>
         </div>
-        <div class="card-body">
-            <div class="alert alert-info">
+        <div class="modern-card-body">
+            <div class="alert alert-info mb-3">
                 <i class="bi bi-info-circle me-2"></i>
                 <strong>Important:</strong> Use this API key in the <code>X-API-KEY</code> header for all API requests.
             </div>
             
             <div class="mb-3">
-                <label class="form-label fw-bold">Your API Key</label>
+                <label class="form-label fw-semibold">Your API Key</label>
                 <div class="input-group">
-                    <input type="text" class="form-control font-monospace" id="apiKeyInput" value="{{ $client->api_key ?? '' }}" readonly>
-                    <button class="btn btn-outline-secondary" type="button" onclick="copyApiKey()">
-                        <i class="bi bi-clipboard"></i> Copy
+                    <input type="text" class="modern-input font-monospace" id="apiKeyInput" value="{{ $client->api_key ?? '' }}" readonly>
+                    <button class="btn-secondary-modern" type="button" onclick="copyApiKey()">
+                        <i class="bi bi-clipboard"></i>
+                        <span>Copy</span>
                     </button>
                 </div>
             </div>
@@ -81,15 +104,15 @@
             <form action="{{ route('settings.regenerate-api-key') }}" method="POST" onsubmit="return confirm('Regenerate API key? This will invalidate the current key and break existing integrations!')">
                 @csrf
                 <button type="submit" class="btn btn-warning">
-                    <i class="bi bi-arrow-clockwise me-1"></i> Regenerate API Key
+                    <i class="bi bi-arrow-clockwise me-2"></i>Regenerate API Key
                 </button>
             </form>
 
             <hr class="my-4">
 
-            <h6 class="mb-3">API Endpoints</h6>
+            <h6 class="mb-3"><i class="bi bi-list-ul me-2"></i>API Endpoints</h6>
             <div class="table-responsive">
-                <table class="table table-sm">
+                <table class="modern-table">
                     <thead>
                         <tr>
                             <th>Method</th>
@@ -125,11 +148,13 @@
     </div>
 
     <!-- Channel Providers -->
-    <div class="card mb-4">
-        <div class="card-header bg-info text-white">
-            <h5 class="mb-0"><i class="bi bi-broadcast-pin me-2"></i>Channel Providers</h5>
+    <div class="modern-card mb-4">
+        <div class="modern-card-header">
+            <h3 class="modern-card-title">
+                <i class="bi bi-broadcast-pin me-2"></i>Channel Providers
+            </h3>
         </div>
-        <div class="card-body">
+        <div class="modern-card-body">
             @forelse($channelsWithCreds as $channel)
                 <div class="border rounded p-3 mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -146,62 +171,63 @@
                         </div>
                     </div>
 
-                    <button class="btn btn-sm btn-outline-primary mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#channel-{{ $channel->id }}">
-                        <i class="bi bi-pencil me-1"></i> Edit Configuration
+                    <button class="btn-secondary-modern mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#channel-{{ $channel->id }}">
+                        <i class="bi bi-pencil"></i>
+                        <span>Edit Configuration</span>
                     </button>
 
                     <div class="collapse" id="channel-{{ $channel->id }}">
                         <form action="{{ route('settings.channel.update', $channel->id) }}" method="POST" class="border-top pt-3">
                             @csrf
 
-                            <div class="row">
+                            <div class="row g-3">
                                 <div class="col-md-6">
-                                    <div class="mb-3">
-                                        <label class="form-label">Status</label>
-                                        <select class="form-select" name="active" required>
-                                            <option value="1" {{ $channel->active ? 'selected' : '' }}>Active</option>
-                                            <option value="0" {{ !$channel->active ? 'selected' : '' }}>Inactive</option>
-                                        </select>
-                                    </div>
+                                    <label class="form-label fw-semibold">Status</label>
+                                    <select class="modern-select" name="active" required>
+                                        <option value="1" {{ $channel->active ? 'selected' : '' }}>Active</option>
+                                        <option value="0" {{ !$channel->active ? 'selected' : '' }}>Inactive</option>
+                                    </select>
                                 </div>
                             </div>
 
                             @if($channel->provider === 'onfon')
-                                <h6 class="mb-3 text-primary"><i class="bi bi-gear-fill me-2"></i>Onfon Credentials</h6>
+                                <h6 class="mt-4 mb-3 text-primary"><i class="bi bi-gear-fill me-2"></i>Onfon Credentials</h6>
                                 
-                                <div class="mb-3">
-                                    <label class="form-label">API Key</label>
-                                    <input type="text" class="form-control font-monospace" name="api_key" 
-                                           value="{{ $channel->credentials_array['api_key'] ?? '' }}" 
-                                           placeholder="VKft5j+GOeSXYSlk+sADT/nx5UMVpcmengSPk9Ou4Ak=">
-                                    <small class="text-muted">Your Onfon API key (ApiKey parameter)</small>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">API Key</label>
+                                        <input type="text" class="modern-input font-monospace" name="api_key" 
+                                               value="{{ $channel->credentials_array['api_key'] ?? '' }}" 
+                                               placeholder="VKft5j+GOeSXYSlk+sADT/nx5UMVpcmengSPk9Ou4Ak=">
+                                        <small class="text-muted">Your Onfon API key (ApiKey parameter)</small>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Client ID (UUID)</label>
+                                        <input type="text" class="modern-input font-monospace" name="client_id_value" 
+                                               value="{{ $channel->credentials_array['client_id'] ?? '' }}" 
+                                               placeholder="e27847c1-a9fe-4eef-b60d-ddb291b175ab">
+                                        <small class="text-muted">Your Onfon tenant/client ID (ClientId parameter)</small>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Access Key Header</label>
+                                        <input type="text" class="modern-input font-monospace" name="access_key_header" 
+                                               value="{{ $channel->credentials_array['access_key_header'] ?? '' }}" 
+                                               placeholder="8oj1kheKHtCX6RiiOOI1sNS9Ir88CXnB">
+                                        <small class="text-muted">AccessKey header value for authentication</small>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Default Sender ID</label>
+                                        <input type="text" class="modern-input" name="default_sender" 
+                                               value="{{ $channel->credentials_array['default_sender'] ?? '' }}" 
+                                               placeholder="PRADY_TECH">
+                                        <small class="text-muted">Approved sender ID from Onfon portal</small>
+                                    </div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="form-label">Client ID (UUID)</label>
-                                    <input type="text" class="form-control font-monospace" name="client_id_value" 
-                                           value="{{ $channel->credentials_array['client_id'] ?? '' }}" 
-                                           placeholder="e27847c1-a9fe-4eef-b60d-ddb291b175ab">
-                                    <small class="text-muted">Your Onfon tenant/client ID (ClientId parameter)</small>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Access Key Header</label>
-                                    <input type="text" class="form-control font-monospace" name="access_key_header" 
-                                           value="{{ $channel->credentials_array['access_key_header'] ?? '' }}" 
-                                           placeholder="8oj1kheKHtCX6RiiOOI1sNS9Ir88CXnB">
-                                    <small class="text-muted">AccessKey header value for authentication</small>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Default Sender ID</label>
-                                    <input type="text" class="form-control" name="default_sender" 
-                                           value="{{ $channel->credentials_array['default_sender'] ?? '' }}" 
-                                           placeholder="PRADY_TECH">
-                                    <small class="text-muted">Approved sender ID from Onfon portal</small>
-                                </div>
-
-                                <div class="alert alert-warning">
+                                <div class="alert alert-warning mt-3">
                                     <strong><i class="bi bi-exclamation-triangle me-2"></i>Important:</strong>
                                     <ul class="mb-0 mt-2">
                                         <li>Get these credentials from your Onfon account manager</li>
@@ -212,8 +238,9 @@
                                 </div>
                             @endif
 
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-save me-1"></i> Save Channel Configuration
+                            <button type="submit" class="btn-primary-modern mt-3">
+                                <i class="bi bi-save"></i>
+                                <span>Save Channel Configuration</span>
                             </button>
                         </form>
                     </div>
@@ -221,55 +248,62 @@
                     <!-- Current Configuration Display -->
                     <div class="mt-3">
                         <small class="text-muted">
-                            <strong>Current Config:</strong><br>
-                            API Key: {{ isset($channel->credentials_array['api_key']) ? (Str::limit($channel->credentials_array['api_key'], 20) . '...') : 'Not set' }}<br>
-                            Client ID: {{ isset($channel->credentials_array['client_id']) ? Str::limit($channel->credentials_array['client_id'], 30) : 'Not set' }}<br>
-                            Sender: {{ $channel->credentials_array['default_sender'] ?? 'Not set' }}
+                            <strong>Current Settings:</strong> 
+                            @if($channel->provider === 'onfon')
+                                API Key: <code class="text-muted">{{ isset($channel->credentials_array['api_key']) ? substr($channel->credentials_array['api_key'], 0, 20) . '...' : 'Not set' }}</code>
+                            @else
+                                Provider: {{ ucfirst($channel->provider) }}
+                            @endif
                         </small>
                     </div>
                 </div>
             @empty
-                <p class="text-muted">No channels configured.</p>
+                <p class="text-muted text-center py-3">
+                    <i class="bi bi-inbox"></i> No channels configured yet.
+                </p>
             @endforelse
         </div>
     </div>
 
-    <!-- Webhook Configuration -->
-    <div class="card mb-4">
-        <div class="card-header bg-warning">
-            <h5 class="mb-0"><i class="bi bi-webhook me-2"></i>Webhook URLs</h5>
+    <!-- Webhook URLs -->
+    <div class="modern-card mb-4">
+        <div class="modern-card-header">
+            <h3 class="modern-card-title">
+                <i class="bi bi-link-45deg me-2"></i>Webhook URLs
+            </h3>
         </div>
-        <div class="card-body">
-            <p class="mb-3">Configure these webhook URLs in your provider portals to receive delivery reports and inbound messages.</p>
-            
+        <div class="modern-card-body">
             <div class="mb-3">
-                <label class="form-label fw-bold">Onfon Delivery Reports</label>
+                <label class="form-label fw-semibold">SMS Webhook</label>
                 <div class="input-group">
-                    <input type="text" class="form-control font-monospace" value="{{ url('/api/webhooks/onfon/dlr') }}" readonly>
-                    <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('{{ url('/api/webhooks/onfon/dlr') }}')">
-                        <i class="bi bi-clipboard"></i> Copy
+                    <input type="text" class="modern-input font-monospace" value="{{ url('/api/webhooks/sms') }}" readonly>
+                    <button class="btn-secondary-modern" type="button" onclick="copyToClipboard('{{ url('/api/webhooks/sms') }}')">
+                        <i class="bi bi-clipboard"></i>
+                        <span>Copy</span>
                     </button>
                 </div>
                 <small class="text-muted">Configure this in Onfon portal → Settings → Webhooks</small>
             </div>
 
             <div class="mb-3">
-                <label class="form-label fw-bold">WhatsApp Webhook</label>
+                <label class="form-label fw-semibold">WhatsApp Webhook</label>
                 <div class="input-group">
-                    <input type="text" class="form-control font-monospace" value="{{ url('/api/webhooks/whatsapp') }}" readonly>
-                    <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('{{ url('/api/webhooks/whatsapp') }}')">
-                        <i class="bi bi-clipboard"></i> Copy
+                    <input type="text" class="modern-input font-monospace" value="{{ url('/api/webhooks/whatsapp') }}" readonly>
+                    <button class="btn-secondary-modern" type="button" onclick="copyToClipboard('{{ url('/api/webhooks/whatsapp') }}')">
+                        <i class="bi bi-clipboard"></i>
+                        <span>Copy</span>
                     </button>
                 </div>
                 <small class="text-muted">Configure in WhatsApp Business API settings</small>
             </div>
 
             <div class="mb-3">
-                <label class="form-label fw-bold">Email Webhook</label>
+                <label class="form-label fw-semibold">Email Webhook</label>
                 <div class="input-group">
-                    <input type="text" class="form-control font-monospace" value="{{ url('/api/webhooks/email') }}" readonly>
-                    <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('{{ url('/api/webhooks/email') }}')">
-                        <i class="bi bi-clipboard"></i> Copy
+                    <input type="text" class="modern-input font-monospace" value="{{ url('/api/webhooks/email') }}" readonly>
+                    <button class="btn-secondary-modern" type="button" onclick="copyToClipboard('{{ url('/api/webhooks/email') }}')">
+                        <i class="bi bi-clipboard"></i>
+                        <span>Copy</span>
                     </button>
                 </div>
                 <small class="text-muted">Configure in your email provider settings</small>
@@ -278,21 +312,25 @@
     </div>
 
     <!-- System Information -->
-    <div class="card">
-        <div class="card-header bg-secondary text-white">
-            <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>System Information</h5>
+    <div class="modern-card">
+        <div class="modern-card-header">
+            <h3 class="modern-card-title">
+                <i class="bi bi-info-circle me-2"></i>System Information
+            </h3>
         </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Laravel Version:</strong> {{ app()->version() }}</p>
-                    <p><strong>PHP Version:</strong> {{ PHP_VERSION }}</p>
-                    <p><strong>Environment:</strong> <span class="badge {{ app()->environment('production') ? 'bg-danger' : 'bg-warning' }}">{{ strtoupper(app()->environment()) }}</span></p>
+        <div class="modern-card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Company ID</label>
+                    <input type="text" class="modern-input font-monospace" value="{{ $client->id ?? 'N/A' }}" readonly>
                 </div>
-                <div class="col-md-6">
-                    <p><strong>Database:</strong> {{ config('database.default') }}</p>
-                    <p><strong>Queue Connection:</strong> {{ config('queue.default') }}</p>
-                    <p><strong>Cache Driver:</strong> {{ config('cache.default') }}</p>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Account Status</label>
+                    <input type="text" class="modern-input" value="{{ isset($client->active) && $client->active ? 'Active' : 'Inactive' }}" readonly>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Created</label>
+                    <input type="text" class="modern-input" value="{{ $client->created_at ? (is_string($client->created_at) ? $client->created_at : $client->created_at->format('M d, Y')) : 'N/A' }}" readonly>
                 </div>
             </div>
         </div>
@@ -301,40 +339,266 @@
 
 <script>
 function copyApiKey() {
-    const input = document.getElementById('apiKeyInput');
-    input.select();
-    document.execCommand('copy');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    apiKeyInput.select();
+    apiKeyInput.setSelectionRange(0, 99999); // For mobile devices
     
-    // Show feedback
-    const btn = event.target.closest('button');
-    const originalHtml = btn.innerHTML;
-    btn.innerHTML = '<i class="bi bi-check"></i> Copied!';
-    btn.classList.add('btn-success');
-    btn.classList.remove('btn-outline-secondary');
-    
-    setTimeout(() => {
-        btn.innerHTML = originalHtml;
-        btn.classList.remove('btn-success');
-        btn.classList.add('btn-outline-secondary');
-    }, 2000);
+    navigator.clipboard.writeText(apiKeyInput.value).then(function() {
+        alert('API Key copied to clipboard!');
+    }, function(err) {
+        console.error('Could not copy text: ', err);
+    });
 }
 
 function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        // Show feedback
-        const btn = event.target.closest('button');
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="bi bi-check"></i> Copied!';
-        btn.classList.add('btn-success');
-        btn.classList.remove('btn-outline-secondary');
-        
-        setTimeout(() => {
-            btn.innerHTML = originalHtml;
-            btn.classList.remove('btn-success');
-            btn.classList.add('btn-outline-secondary');
-        }, 2000);
+    navigator.clipboard.writeText(text).then(function() {
+        alert('Webhook URL copied to clipboard!');
+    }, function(err) {
+        console.error('Could not copy text: ', err);
     });
 }
+</script>
+
+@if(Auth::user()->isAdmin())
+<!-- Admin Settings Section -->
+<div class="modern-page-container mt-4">
+    <div class="modern-card">
+        <div class="modern-card-header">
+            <h3 class="modern-card-title">
+                <i class="bi bi-shield-lock me-2"></i>Admin Settings
+            </h3>
+        </div>
+        <div class="modern-card-body">
+        @if($adminSettings && $adminSettings->count() > 0)
+            @if($errors->any())
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <ul class="mb-0">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+            
+            <!-- Balance & Notification Settings -->
+            <form method="POST" action="{{ route('settings.admin.update') }}" id="adminSettingsForm">
+                @csrf
+                <!-- Hidden admin_phone field for legacy compatibility -->
+                <input type="hidden" name="admin_phone" value="{{ $adminSettings->where('key', 'admin_phone')->first()->value ?? '254722295194' }}">
+                <div class="row g-3 mb-4">
+                    <!-- Low Balance Threshold -->
+                    <div class="col-md-4">
+                        <label for="low_balance_threshold" class="form-label">
+                            <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                            Low Balance Threshold
+                        </label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="low_balance_threshold" 
+                                   name="low_balance_threshold" 
+                                   value="{{ $adminSettings->where('key', 'low_balance_threshold')->first()->value ?? 1000 }}"
+                                   min="1" 
+                                   step="1">
+                            <span class="input-group-text">units</span>
+                        </div>
+                        <div class="form-text">Send SMS alert when Onfon balance drops below this number</div>
+                    </div>
+
+                    <!-- Refresh Interval -->
+                    <div class="col-md-4">
+                        <label for="balance_refresh_interval" class="form-label">
+                            <i class="bi bi-clock text-info me-2"></i>
+                            Balance Refresh Interval
+                        </label>
+                        <div class="input-group">
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="balance_refresh_interval" 
+                                   name="balance_refresh_interval" 
+                                   value="{{ $adminSettings->where('key', 'balance_refresh_interval')->first()->value ?? 60 }}"
+                                   min="1" 
+                                   max="1440" 
+                                   step="1">
+                            <span class="input-group-text">minutes</span>
+                        </div>
+                        <div class="form-text">How often to automatically refresh Onfon balance</div>
+                    </div>
+
+                    <!-- Current Balance Display -->
+                    <div class="col-md-4">
+                        <label class="form-label">
+                            <i class="bi bi-wallet text-success me-2"></i>
+                            Current Onfon Balance
+                        </label>
+                        <div class="input-group">
+                            <input type="text" 
+                                   class="form-control" 
+                                   value="{{ number_format(cache()->get('onfon_system_balance', 0), 2) }}" 
+                                   readonly>
+                            <span class="input-group-text">units</span>
+                        </div>
+                        <div class="form-text">Last refreshed: {{ cache()->has('onfon_system_balance') ? 'Recently' : 'Never' }}</div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary-modern" id="updateAdminSettingsBtn">
+                    <i class="bi bi-save"></i>
+                    <span>Update Admin Settings</span>
+                </button>
+            </form>
+        @endif
+
+        <!-- Phone Numbers Management -->
+        <div class="mt-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">
+                    <i class="bi bi-phone text-primary me-2"></i>
+                    Alert Phone Numbers
+                </h5>
+                <button type="button" class="btn-primary-modern" data-bs-toggle="modal" data-bs-target="#addPhoneModal">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>Add Phone Number</span>
+                </button>
+            </div>
+
+            @if($phoneNumbers && $phoneNumbers->count() > 0)
+                <div class="table-responsive">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Phone Number</th>
+                                <th>Notes</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($phoneNumbers as $phone)
+                                <tr>
+                                    <td><strong>{{ $phone->name ?: 'No name' }}</strong></td>
+                                    <td><code>{{ $phone->phone_number }}</code></td>
+                                    <td><small class="text-muted">{{ $phone->notes ?: 'No notes' }}</small></td>
+                                    <td>
+                                        @if($phone->is_active)
+                                            <span class="badge bg-success">Active</span>
+                                        @else
+                                            <span class="badge bg-secondary">Disabled</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ route('settings.phone.toggle', $phone->id) }}" 
+                                               class="btn btn-outline-{{ $phone->is_active ? 'warning' : 'success' }}"
+                                               title="{{ $phone->is_active ? 'Disable' : 'Enable' }}">
+                                                <i class="bi bi-{{ $phone->is_active ? 'pause' : 'play' }}"></i>
+                                            </a>
+                                            <a href="{{ route('settings.phone.delete', $phone->id) }}" 
+                                               class="btn btn-outline-danger"
+                                               onclick="return confirm('Are you sure you want to delete this phone number?')"
+                                               title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <div class="text-center py-4">
+                    <i class="bi bi-phone text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-2">No phone numbers added yet</p>
+                    <button type="button" class="btn-primary-modern" data-bs-toggle="modal" data-bs-target="#addPhoneModal">
+                        <i class="bi bi-plus-lg"></i>
+                        <span>Add First Phone Number</span>
+                    </button>
+                </div>
+            @endif
+        </div>
+    </div>
+</div>
+
+<!-- Add Phone Number Modal -->
+<div class="modal fade" id="addPhoneModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('settings.phone.add') }}">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Alert Phone Number</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="phone_number" class="form-label fw-semibold">Phone Number *</label>
+                        <input type="text" 
+                               class="modern-input" 
+                               id="phone_number" 
+                               name="phone_number" 
+                               placeholder="254722295194"
+                               required>
+                        <small class="text-muted">Include country code (e.g., 254722295194)</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="name" class="form-label fw-semibold">Contact Name</label>
+                        <input type="text" 
+                               class="modern-input" 
+                               id="name" 
+                               name="name" 
+                               placeholder="John Doe">
+                        <small class="text-muted">Optional name for this contact</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label fw-semibold">Notes</label>
+                        <textarea class="modern-input" 
+                                  id="notes" 
+                                  name="notes" 
+                                  rows="2"
+                                  placeholder="Optional notes about this contact"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn-primary-modern">
+                        <i class="bi bi-plus-lg"></i>
+                        <span>Add Phone Number</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
+<script>
+// Debug admin settings form
+document.addEventListener('DOMContentLoaded', function() {
+    const adminForm = document.getElementById('adminSettingsForm');
+    const submitBtn = document.getElementById('updateAdminSettingsBtn');
+    
+    if (adminForm && submitBtn) {
+        console.log('Admin settings form found');
+        
+        adminForm.addEventListener('submit', function(e) {
+            console.log('Admin settings form submitted');
+            console.log('Form data:', new FormData(adminForm));
+            
+            // Show loading state
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Updating...';
+            submitBtn.disabled = true;
+        });
+        
+        submitBtn.addEventListener('click', function(e) {
+            console.log('Update admin settings button clicked');
+        });
+    } else {
+        console.log('Admin settings form not found');
+    }
+});
 </script>
 @endsection
 

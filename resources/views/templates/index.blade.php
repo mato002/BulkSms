@@ -186,7 +186,7 @@
         </div>
         @if($templates->hasPages())
         <div class="modern-card-footer">
-            {{ $templates->links() }}
+            {{ $templates->links('vendor.pagination.simple') }}
         </div>
         @endif
     </div>

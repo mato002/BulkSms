@@ -52,6 +52,9 @@ class DashboardController extends Controller
         $stats['balance_units'] = $currentClient ? $currentClient->getBalanceInUnits() : 0;
         $stats['onfon_balance'] = $currentClient ? $currentClient->onfon_balance : 0;
         $stats['price_per_unit'] = $currentClient ? $currentClient->price_per_unit : 0;
+        
+        // System-wide Onfon balance (from cache or API)
+        $stats['system_onfon_balance'] = $this->getSystemOnfonBalance();
 
         // Admin stats (if admin)
         if ($isAdmin) {
@@ -185,6 +188,61 @@ class DashboardController extends Controller
         });
 
         return array_slice($activities, 0, 8);
+    }
+
+    /**
+     * Get system-wide Onfon balance using correct API endpoint
+     */
+    private function getSystemOnfonBalance()
+    {
+        // First try to get from cache (refreshed every hour)
+        $cachedBalance = cache()->get('onfon_system_balance');
+        if ($cachedBalance !== null) {
+            return $cachedBalance;
+        }
+
+        // Get credentials from config (uses .env values)
+        $apiKey = config('sms.gateways.onfon.api_key');
+        $clientId = config('sms.gateways.onfon.client_id');
+
+        // Skip if credentials are not configured (placeholder values)
+        if (empty($apiKey) || $apiKey === 'your_onfon_api_key_here') {
+            \Illuminate\Support\Facades\Log::warning('Onfon credentials not configured in .env file');
+            return 0;
+        }
+
+        // If not in cache, fetch from API
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(30)
+                ->withOptions(['verify' => false])
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'AccessKey' => '8oj1kheKHtCX6RiiOOI1sNS9Ir88CXnB',
+                ])
+                ->get('https://api.onfonmedia.co.ke/v1/sms/Balance', [
+                    'ApiKey' => $apiKey,
+                    'ClientId' => $clientId,
+                ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                if (isset($data['Data'][0]['Credits'])) {
+                    $balance = (float) $data['Data'][0]['Credits'];
+                    // Cache for 15 minutes (to reflect real-time changes)
+                    cache()->put('onfon_system_balance', $balance, now()->addMinutes(15));
+                    return $balance;
+                }
+            }
+
+            \Illuminate\Support\Facades\Log::error('Onfon balance fetch failed', [
+                'status' => $response->status(),
+                'response' => $response->body()
+            ]);
+            return 0;
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Onfon balance exception: ' . $e->getMessage());
+            return 0;
+        }
     }
 }
 

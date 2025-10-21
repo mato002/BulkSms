@@ -3,11 +3,11 @@
 namespace App\Console\Commands;
 
 use App\Models\Client;
-use App\Mail\LowBalanceAlert;
+use App\Models\User;
+use App\Models\NotificationSetting;
+use App\Notifications\LowBalanceNotification;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 class CheckLowBalances extends Command
 {
@@ -16,91 +16,80 @@ class CheckLowBalances extends Command
      *
      * @var string
      */
-    protected $signature = 'balance:check-low {--threshold=100 : Balance threshold for alerts}';
+    protected $signature = 'balance:check-low';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Check for clients with low balance and send alert emails';
+    protected $description = 'Check for clients with low balances and send notifications';
 
     /**
      * Execute the console command.
      */
     public function handle()
     {
-        $threshold = (float) $this->option('threshold');
+        $this->info('Checking for low balances...');
 
-        $this->info("Checking for clients with balance below KES {$threshold}...");
+        $settings = NotificationSetting::where('low_balance_enabled', true)->get();
 
-        // Get clients with low balance and active status
-        $lowBalanceClients = Client::where('status', true)
-            ->where('balance', '<=', $threshold)
-            ->where('balance', '>', 0) // Exclude zero balances
-            ->get();
-
-        if ($lowBalanceClients->isEmpty()) {
-            $this->info('No clients with low balance found.');
-            return Command::SUCCESS;
+        if ($settings->isEmpty()) {
+            $this->info('No clients have low balance alerts enabled.');
+            return 0;
         }
 
-        $this->info("Found {$lowBalanceClients->count()} client(s) with low balance.");
+        $alertCount = 0;
 
-        $sentCount = 0;
-        $skippedCount = 0;
-
-        foreach ($lowBalanceClients as $client) {
-            // Check if we've already sent an alert recently (within last 24 hours)
-            $cacheKey = "low_balance_alert_sent_{$client->id}";
+        foreach ($settings as $setting) {
+            $client = $setting->client;
             
-            if (Cache::has($cacheKey)) {
-                $this->line("Skipping {$client->name} - alert already sent recently");
-                $skippedCount++;
+            if (!$client) {
                 continue;
             }
 
-            // Validate email
-            if (!$client->contact || !filter_var($client->contact, FILTER_VALIDATE_EMAIL)) {
-                $this->warn("Skipping {$client->name} - no valid email address");
-                $skippedCount++;
-                continue;
-            }
+            // Check if balance is below threshold
+            if ($client->balance < $setting->low_balance_threshold) {
+                $this->info("Low balance detected for: {$client->name}");
+                $this->info("  Balance: KES " . number_format($client->balance, 2));
+                $this->info("  Threshold: KES " . number_format($setting->low_balance_threshold, 2));
 
-            try {
-                // Send low balance alert
-                Mail::to($client->contact)->send(new LowBalanceAlert($client, $threshold));
+                // Get users to notify
+                $users = User::where('client_id', $client->id)->get();
 
-                // Cache that we've sent an alert (expires in 24 hours)
-                Cache::put($cacheKey, true, now()->addHours(24));
+                foreach ($users as $user) {
+                    try {
+                        // Check if already notified recently (within 24 hours)
+                        $recentNotification = $user->notifications()
+                            ->where('type', LowBalanceNotification::class)
+                            ->where('created_at', '>', now()->subHours(24))
+                            ->first();
 
-                $this->line("✓ Sent alert to {$client->name} ({$client->contact}) - Balance: KES {$client->balance}");
-                $sentCount++;
+                        if (!$recentNotification) {
+                            $user->notify(new LowBalanceNotification(
+                                $client,
+                                $client->balance,
+                                $setting->low_balance_threshold
+                            ));
 
-                Log::info('Low balance alert sent', [
-                    'client_id' => $client->id,
-                    'client_name' => $client->name,
-                    'balance' => $client->balance,
-                    'threshold' => $threshold
-                ]);
-
-            } catch (\Exception $e) {
-                $this->error("✗ Failed to send alert to {$client->name}: {$e->getMessage()}");
-                
-                Log::error('Failed to send low balance alert', [
-                    'client_id' => $client->id,
-                    'error' => $e->getMessage()
-                ]);
+                            $this->info("  ✓ Notified: {$user->email}");
+                            $alertCount++;
+                        } else {
+                            $this->info("  ⊘ Already notified recently: {$user->email}");
+                        }
+                    } catch (\Exception $e) {
+                        $this->error("  ✗ Failed to notify {$user->email}: {$e->getMessage()}");
+                        Log::error('Failed to send low balance notification', [
+                            'user_id' => $user->id,
+                            'client_id' => $client->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
             }
         }
 
-        $this->newLine();
-        $this->info("Summary:");
-        $this->info("- Alerts sent: {$sentCount}");
-        $this->info("- Skipped: {$skippedCount}");
-        $this->info("- Total processed: {$lowBalanceClients->count()}");
-
-        return Command::SUCCESS;
+        $this->info("✓ Done! Sent {$alertCount} alert(s).");
+        return 0;
     }
 }
-

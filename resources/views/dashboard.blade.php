@@ -113,14 +113,14 @@
                         </button>
                     </div>
                     <div class="stat-value" id="onfonBalanceValue">
-                        @if($currentClient->onfon_balance !== null)
-                            KSh {{ number_format($stats['onfon_balance'], 2) }}
+                        @if($stats['system_onfon_balance'] > 0)
+                            {{ number_format($stats['system_onfon_balance'], 2) }} units
                         @else
-                            <span class="text-muted" style="font-size: 1rem;">Not synced</span>
+                            <span class="text-muted" style="font-size: 1rem;">Loading...</span>
                         @endif
                     </div>
                     <div class="stat-footer">
-                        <span class="text-muted" id="onfonLastSync">Last sync: {{ $currentClient->onfon_last_sync ? $currentClient->onfon_last_sync->diffForHumans() : 'Never' }}</span>
+                        <span class="text-muted" id="onfonLastSync">Onfon Credits Available</span>
                     </div>
                 </div>
             </div>
@@ -1478,43 +1478,34 @@
         btn.disabled = true;
         btn.innerHTML = '<i class="bi bi-arrow-clockwise spinner-border spinner-border-sm"></i>';
         
-        // Make AJAX request
-        fetch('{{ route("wallet.onfon.sync") }}', {
+        // Fetch fresh balance from API
+        fetch('/api/onfon/balance/refresh', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json'
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             }
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 // Update balance display
-                balanceValue.innerHTML = 'KSh ' + parseFloat(data.data.new_balance).toLocaleString('en-US', {
+                balanceValue.innerHTML = data.balance.toLocaleString('en-US', {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
-                });
+                }) + ' units';
                 
-                // Update last sync
-                lastSync.innerHTML = 'Last sync: ' + data.data.last_sync;
+                // Update last sync time
+                lastSync.textContent = 'Just now';
                 
-                // Show success message
-                showNotification('success', data.message);
-                
-                // Show difference if significant
-                if (Math.abs(data.data.difference) > 0) {
-                    const diffMsg = data.data.difference > 0 
-                        ? `+KSh ${parseFloat(data.data.difference).toFixed(2)}` 
-                        : `KSh ${parseFloat(data.data.difference).toFixed(2)}`;
-                    showNotification('info', `Balance changed: ${diffMsg}`);
-                }
+                // Show success notification
+                showNotification('success', `Balance updated: ${data.balance.toFixed(2)} units`);
             } else {
                 showNotification('error', data.message || 'Failed to sync balance');
             }
         })
         .catch(error => {
-            console.error('Sync error:', error);
+            console.error('Balance sync error:', error);
             showNotification('error', 'Network error. Please try again.');
         })
         .finally(() => {
@@ -1523,6 +1514,67 @@
             btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
         });
     }
+
+    // Auto-refresh Onfon balance every 30 seconds
+    let balanceRefreshInterval = null;
+    
+    function startBalanceAutoRefresh() {
+        // Clear any existing interval
+        if (balanceRefreshInterval) {
+            clearInterval(balanceRefreshInterval);
+        }
+        
+        // Auto-refresh every 30 seconds
+        balanceRefreshInterval = setInterval(() => {
+            fetchOnfonBalanceQuietly();
+        }, 30000); // 30 seconds
+    }
+
+    // Fetch balance without showing loading or notifications
+    function fetchOnfonBalanceQuietly() {
+        fetch('/api/onfon/balance/refresh', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const balanceValue = document.getElementById('onfonBalanceValue');
+                const currentBalance = parseFloat(balanceValue.textContent.replace(/[^0-9.]/g, ''));
+                const newBalance = parseFloat(data.balance);
+                
+                // Only update if balance changed
+                if (currentBalance !== newBalance) {
+                    balanceValue.innerHTML = newBalance.toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }) + ' units';
+                    
+                    // Add pulse animation to show update
+                    balanceValue.style.animation = 'pulse 0.5s ease-in-out';
+                    setTimeout(() => {
+                        balanceValue.style.animation = '';
+                    }, 500);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Auto-refresh error:', error);
+        });
+    }
+
+    // Start auto-refresh when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        startBalanceAutoRefresh();
+        
+        // Also fetch immediately on page load
+        setTimeout(() => {
+            fetchOnfonBalanceQuietly();
+        }, 2000);
+    });
 
     // Notification helper function
     function showNotification(type, message) {

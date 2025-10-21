@@ -228,6 +228,69 @@ class WalletController extends Controller
     }
 
     /**
+     * Refresh system-wide Onfon balance (for dashboard real-time updates)
+     */
+    public function refreshSystemBalance()
+    {
+        try {
+            // Get credentials from config
+            $apiKey = config('sms.gateways.onfon.api_key');
+            $clientId = config('sms.gateways.onfon.client_id');
+
+            // Skip if credentials are not configured
+            if (empty($apiKey) || $apiKey === 'your_onfon_api_key_here') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Onfon credentials not configured'
+                ], 400);
+            }
+
+            // Fetch fresh balance from Onfon API
+            $response = \Illuminate\Support\Facades\Http::timeout(30)
+                ->withOptions(['verify' => false])
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                    'AccessKey' => '8oj1kheKHtCX6RiiOOI1sNS9Ir88CXnB',
+                ])
+                ->get('https://api.onfonmedia.co.ke/v1/sms/Balance', [
+                    'ApiKey' => $apiKey,
+                    'ClientId' => $clientId,
+                ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                
+                if (isset($data['Data'][0]['Credits'])) {
+                    $balance = (float) $data['Data'][0]['Credits'];
+                    
+                    // Update cache (15 minutes)
+                    cache()->put('onfon_system_balance', $balance, now()->addMinutes(15));
+                    
+                    return response()->json([
+                        'success' => true,
+                        'balance' => $balance,
+                        'currency' => 'KES',
+                        'last_update' => now()->toIso8601String()
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch balance from Onfon API'
+            ], 400);
+
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('System balance refresh error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Network error: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Export transactions to CSV
      */
     public function exportTransactions(Request $request)

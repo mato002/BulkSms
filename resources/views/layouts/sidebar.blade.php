@@ -17,6 +17,16 @@
     <i class="bi bi-people"></i>
     <span>Contacts</span>
 </a>
+<a href="{{ route('tags.index') }}" class="sidebar-nav-item {{ request()->routeIs('tags.*') ? 'active' : '' }}">
+    <i class="bi bi-tags"></i>
+    <span>Tags</span>
+    @php
+        $tagCount = \App\Models\Tag::where('client_id', session('client_id', 1))->count();
+    @endphp
+    @if($tagCount > 0)
+        <span class="badge bg-info ms-auto">{{ $tagCount }}</span>
+    @endif
+</a>
 <a href="{{ route('templates.index') }}" class="sidebar-nav-item {{ request()->routeIs('templates.*') ? 'active' : '' }}">
     <i class="bi bi-file-text"></i>
     <span>Templates</span>
@@ -67,9 +77,13 @@
     <i class="bi bi-bar-chart"></i>
     <span>Analytics</span>
 </a>
-<a href="{{ route('settings.index') }}" class="sidebar-nav-item {{ request()->routeIs('settings.*') ? 'active' : '' }}">
+<a href="{{ route('settings.index') }}" class="sidebar-nav-item {{ request()->routeIs('settings.index') ? 'active' : '' }}">
     <i class="bi bi-gear"></i>
     <span>Settings</span>
+</a>
+<a href="{{ route('notifications.settings') }}" class="sidebar-nav-item {{ request()->routeIs('notifications.*') ? 'active' : '' }}">
+    <i class="bi bi-bell"></i>
+    <span>Notifications</span>
 </a>
 
 @if(Auth::check() && Auth::user()->isAdmin())

@@ -230,7 +230,7 @@
             @if($clients->hasPages())
                 <div class="card-footer bg-light">
                     <div class="d-flex justify-content-center">
-                        {{ $clients->links() }}
+                        {{ $clients->links('vendor.pagination.simple') }}
                     </div>
                 </div>
             @endif

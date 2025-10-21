@@ -2,102 +2,140 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Notification;
+use App\Models\NotificationSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class NotificationController extends Controller
 {
     /**
-     * Get the authenticated user's client ID.
+     * Show notification settings
      */
-    private function getClientId()
+    public function settings()
     {
-        $user = Auth::user();
-        
-        // If user has a client_id, use it; otherwise default to 1 for backwards compatibility
-        return $user && $user->client_id ? $user->client_id : 1;
+        $clientId = session('client_id', 1);
+        $userId = Auth::id();
+
+        $settings = NotificationSetting::getForClient($clientId, $userId);
+
+        return view('notifications.settings', compact('settings'));
     }
 
     /**
-     * Get recent notifications for the current client.
+     * Update notification settings
      */
-    public function index(Request $request)
+    public function updateSettings(Request $request)
     {
-        $clientId = $this->getClientId();
-        
-        $notifications = Notification::forClient($clientId)
-            ->orderBy('created_at', 'desc')
-            ->limit(20)
-            ->get();
-
-        return response()->json([
-            'notifications' => $notifications,
-            'unread_count' => Notification::forClient($clientId)->unread()->count()
+        $validated = $request->validate([
+            'low_balance_enabled' => 'boolean',
+            'low_balance_threshold' => 'nullable|numeric|min:0',
+            'failed_delivery_enabled' => 'boolean',
+            'failed_delivery_threshold' => 'nullable|integer|min:1',
+            'daily_summary_enabled' => 'boolean',
+            'daily_summary_time' => 'nullable|date_format:H:i',
+            'weekly_summary_enabled' => 'boolean',
+            'weekly_summary_day' => 'nullable|in:monday,tuesday,wednesday,thursday,friday,saturday,sunday',
+            'campaign_complete_enabled' => 'boolean',
+            'large_campaign_warning_enabled' => 'boolean',
+            'large_campaign_threshold' => 'nullable|integer|min:1',
+            'notify_via_email' => 'boolean',
+            'notify_via_sms' => 'boolean',
+            'notify_via_browser' => 'boolean',
         ]);
+
+        $clientId = session('client_id', 1);
+        $userId = Auth::id();
+
+        $settings = NotificationSetting::getForClient($clientId, $userId);
+        $settings->update($validated);
+
+        return redirect()->route('notifications.settings')
+            ->with('success', 'Notification settings updated successfully');
     }
 
     /**
-     * Get unread notifications count.
+     * Get unread notifications count (AJAX)
      */
     public function unreadCount()
     {
-        $clientId = $this->getClientId();
-        
+        $user = Auth::user();
+        $count = $user->unreadNotifications()->count();
+
         return response()->json([
-            'count' => Notification::forClient($clientId)->unread()->count()
+            'count' => $count,
         ]);
     }
 
     /**
-     * Mark a notification as read.
+     * Get notifications (AJAX)
+     */
+    public function getNotifications(Request $request)
+    {
+        $user = Auth::user();
+        $limit = $request->get('limit', 10);
+
+        $notifications = $user->notifications()
+            ->take($limit)
+            ->get()
+            ->map(function ($notification) {
+                return [
+                    'id' => $notification->id,
+                    'type' => $notification->type,
+                    'data' => $notification->data,
+                    'read_at' => $notification->read_at,
+                    'created_at' => $notification->created_at->diffForHumans(),
+                ];
+            });
+
+        return response()->json([
+            'notifications' => $notifications,
+        ]);
+    }
+
+    /**
+     * Mark notification as read
      */
     public function markAsRead($id)
     {
-        $clientId = $this->getClientId();
-        
-        $notification = Notification::forClient($clientId)->findOrFail($id);
-        $notification->markAsRead();
+        $user = Auth::user();
+        $notification = $user->notifications()->find($id);
+
+        if ($notification) {
+            $notification->markAsRead();
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Notification marked as read'
         ]);
     }
 
     /**
-     * Mark all notifications as read.
+     * Mark all notifications as read
      */
     public function markAllAsRead()
     {
-        $clientId = $this->getClientId();
-        
-        Notification::forClient($clientId)
-            ->unread()
-            ->update([
-                'is_read' => true,
-                'read_at' => now()
-            ]);
+        $user = Auth::user();
+        $user->unreadNotifications()->update(['read_at' => now()]);
 
         return response()->json([
             'success' => true,
-            'message' => 'All notifications marked as read'
         ]);
     }
 
     /**
-     * Delete a notification.
+     * Delete a notification
      */
-    public function destroy($id)
+    public function delete($id)
     {
-        $clientId = $this->getClientId();
-        
-        $notification = Notification::forClient($clientId)->findOrFail($id);
-        $notification->delete();
+        $user = Auth::user();
+        $notification = $user->notifications()->find($id);
+
+        if ($notification) {
+            $notification->delete();
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Notification deleted'
         ]);
     }
 }

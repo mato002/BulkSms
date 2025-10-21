@@ -16,6 +16,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WhatsAppController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AdminSettingsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -160,7 +161,30 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('campaigns', CampaignController::class);
     Route::post('campaigns/{campaign}/send', [CampaignController::class, 'send'])->name('campaigns.send');
 
+    // Tags Management
+    Route::prefix('tags')->name('tags.')->group(function () {
+        Route::get('/', [App\Http\Controllers\TagController::class, 'index'])->name('index');
+        Route::post('/', [App\Http\Controllers\TagController::class, 'store'])->name('store');
+        Route::put('/{tag}', [App\Http\Controllers\TagController::class, 'update'])->name('update');
+        Route::delete('/{tag}', [App\Http\Controllers\TagController::class, 'destroy'])->name('destroy');
+        Route::get('/{tag}/contacts', [App\Http\Controllers\TagController::class, 'getContacts'])->name('contacts');
+        Route::post('/contact/{contact}/add', [App\Http\Controllers\TagController::class, 'addToContact'])->name('addToContact');
+        Route::delete('/contact/{contact}/remove/{tag}', [App\Http\Controllers\TagController::class, 'removeFromContact'])->name('removeFromContact');
+    });
+
+    // Notifications
+    Route::prefix('notifications')->name('notifications.')->group(function () {
+        Route::get('/settings', [App\Http\Controllers\NotificationController::class, 'settings'])->name('settings');
+        Route::put('/settings', [App\Http\Controllers\NotificationController::class, 'updateSettings'])->name('update-settings');
+        Route::get('/unread-count', [App\Http\Controllers\NotificationController::class, 'unreadCount'])->name('unread-count');
+        Route::get('/list', [App\Http\Controllers\NotificationController::class, 'getNotifications'])->name('list');
+        Route::post('/{id}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('mark-read');
+        Route::post('/read-all', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+        Route::delete('/{id}', [App\Http\Controllers\NotificationController::class, 'delete'])->name('delete');
+    });
+
     Route::resource('messages', MessageController::class)->only(['index', 'show']);
+    Route::get('/messages-all', [MessageController::class, 'allMessages'])->name('messages.all');
 
     // Inbox (Conversations/Chat)
     Route::get('/inbox', [InboxController::class, 'index'])->name('inbox.index');
@@ -185,6 +209,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/settings/client', [SettingsController::class, 'updateClient'])->name('settings.client.update');
     Route::post('/settings/channel/{channel}', [SettingsController::class, 'updateChannel'])->name('settings.channel.update');
     Route::post('/settings/regenerate-api-key', [SettingsController::class, 'regenerateApiKey'])->name('settings.regenerate-api-key');
+    
+    // Admin Settings (consolidated into main settings)
+    Route::post('/settings/admin', [SettingsController::class, 'updateAdminSettings'])->name('settings.admin.update');
+    Route::post('/settings/phone/add', [SettingsController::class, 'addPhoneNumber'])->name('settings.phone.add');
+    Route::get('/settings/phone/{id}/toggle', [SettingsController::class, 'togglePhoneNumber'])->name('settings.phone.toggle');
+    Route::delete('/settings/phone/{id}/delete', [SettingsController::class, 'deletePhoneNumber'])->name('settings.phone.delete');
 
     // Wallet & Top-up Routes
     Route::prefix('wallet')->name('wallet.')->group(function () {
@@ -198,6 +228,17 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/onfon/sync', [App\Http\Controllers\WalletController::class, 'syncOnfonBalance'])->name('onfon.sync');
         Route::get('/onfon/balance', [App\Http\Controllers\WalletController::class, 'getOnfonBalance'])->name('onfon.balance');
     });
+
+// Public API endpoints (accessible without wallet prefix) for dashboard real-time updates
+Route::prefix('api')->name('api.')->group(function () {
+    Route::post('/onfon/balance/refresh', [App\Http\Controllers\WalletController::class, 'refreshSystemBalance'])->name('onfon.balance.refresh');
+});
+
+// Client switching for debugging (temporary)
+Route::get('/switch-client/{clientId}', function($clientId) {
+    session(['client_id' => $clientId]);
+    return redirect()->back()->with('success', 'Switched to client ' . $clientId);
+})->name('switch.client');
 
     // API Documentation & Developer Portal
     Route::get('/api-docs', [App\Http\Controllers\ApiDocumentationController::class, 'index'])->name('api.docs');
@@ -243,6 +284,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{id}/test-onfon', [AdminController::class, 'testOnfonConnection'])->name('test-onfon');
         Route::get('/{id}/onfon-transactions', [AdminController::class, 'getOnfonTransactions'])->name('onfon-transactions');
     });
+
 
     // Senders Page (For all users)
     Route::get('/senders', function() {

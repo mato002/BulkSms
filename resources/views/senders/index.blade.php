@@ -265,7 +265,7 @@
             </div>
 
             <div class="mt-3">
-                {{ $clients->links() }}
+                {{ $clients->links('vendor.pagination.simple') }}
             </div>
         </div>
     </div>

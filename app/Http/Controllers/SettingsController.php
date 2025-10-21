@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use App\Models\AdminSetting;
+use App\Models\AlertPhoneNumber;
+use Illuminate\Support\Facades\Validator;
 
 class SettingsController extends Controller
 {
@@ -26,7 +29,15 @@ class SettingsController extends Controller
             return $channel;
         });
 
-        return view('settings.index', compact('client', 'channelsWithCreds'));
+        // Get admin settings if user is admin
+        $adminSettings = null;
+        $phoneNumbers = null;
+        if (Auth::user()->isAdmin()) {
+            $adminSettings = AdminSetting::all();
+            $phoneNumbers = AlertPhoneNumber::orderBy('created_at', 'desc')->get();
+        }
+
+        return view('settings.index', compact('client', 'channelsWithCreds', 'adminSettings', 'phoneNumbers'));
     }
 
     public function updateClient(Request $request)
@@ -111,5 +122,81 @@ class SettingsController extends Controller
             ]);
 
         return redirect()->route('settings.index')->with('success', 'API key regenerated successfully');
+    }
+
+    // Admin Settings Methods
+    public function updateAdminSettings(Request $request)
+    {
+        if (!Auth::user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'low_balance_threshold' => 'required|numeric|min:1',
+            'admin_phone' => 'nullable|string|min:10',
+            'balance_refresh_interval' => 'required|numeric|min:1|max:1440',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        AdminSetting::set('low_balance_threshold', $request->low_balance_threshold, 'number', 'Minimum Onfon balance units before sending low balance alert');
+        AdminSetting::set('admin_phone', $request->admin_phone, 'string', 'Phone number to receive low balance SMS alerts');
+        AdminSetting::set('balance_refresh_interval', $request->balance_refresh_interval, 'number', 'How often to refresh Onfon balance (in minutes)');
+
+        return back()->with('success', 'Admin settings updated successfully!');
+    }
+
+    public function addPhoneNumber(Request $request)
+    {
+        if (!Auth::user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'phone_number' => 'required|string|min:10|max:15',
+            'name' => 'nullable|string|max:100',
+            'notes' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        AlertPhoneNumber::create([
+            'phone_number' => $request->phone_number,
+            'name' => $request->name,
+            'notes' => $request->notes,
+            'is_active' => true
+        ]);
+
+        return back()->with('success', 'Phone number added successfully!');
+    }
+
+    public function togglePhoneNumber($id)
+    {
+        if (!Auth::user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $phoneNumber = AlertPhoneNumber::findOrFail($id);
+        $phoneNumber->is_active = !$phoneNumber->is_active;
+        $phoneNumber->save();
+
+        $status = $phoneNumber->is_active ? 'enabled' : 'disabled';
+        return back()->with('success', "Phone number {$status} successfully!");
+    }
+
+    public function deletePhoneNumber($id)
+    {
+        if (!Auth::user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $phoneNumber = AlertPhoneNumber::findOrFail($id);
+        $phoneNumber->delete();
+
+        return back()->with('success', 'Phone number deleted successfully!');
     }
 }

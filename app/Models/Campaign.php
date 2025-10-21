@@ -33,6 +33,9 @@ class Campaign extends Model
         'recipients' => 'array',
         'scheduled_at' => 'datetime',
         'sent_at' => 'datetime',
+        'processed_at' => 'datetime',
+        'is_scheduled' => 'boolean',
+        'recurrence_settings' => 'array',
         'total_cost' => 'decimal:2'
     ];
 
@@ -96,5 +99,75 @@ class Campaign extends Model
         $this->failed_count = $this->sms()->where('status', 'failed')->count();
         $this->total_cost = $this->sms()->sum('cost');
         $this->save();
+    }
+
+    /**
+     * Scope for scheduled campaigns
+     */
+    public function scopeScheduled($query)
+    {
+        return $query->where('is_scheduled', true)
+                    ->whereNotNull('scheduled_at')
+                    ->whereNull('processed_at');
+    }
+
+    /**
+     * Scope for campaigns due to be sent
+     */
+    public function scopeDue($query)
+    {
+        return $query->scheduled()
+                    ->where('scheduled_at', '<=', now());
+    }
+
+    /**
+     * Check if campaign is due to be sent
+     */
+    public function isDue(): bool
+    {
+        return $this->is_scheduled 
+            && $this->scheduled_at 
+            && $this->scheduled_at <= now() 
+            && !$this->processed_at;
+    }
+
+    /**
+     * Mark campaign as processed
+     */
+    public function markAsProcessed(): bool
+    {
+        $this->processed_at = now();
+        return $this->save();
+    }
+
+    /**
+     * Check if campaign is recurring
+     */
+    public function isRecurring(): bool
+    {
+        return !empty($this->recurrence);
+    }
+
+    /**
+     * Get next occurrence for recurring campaign
+     */
+    public function getNextOccurrence()
+    {
+        if (!$this->isRecurring() || !$this->scheduled_at) {
+            return null;
+        }
+
+        $current = $this->scheduled_at;
+
+        switch ($this->recurrence) {
+            case 'daily':
+                return $current->addDay();
+            case 'weekly':
+                return $current->addWeek();
+            case 'monthly':
+                return $current->addMonth();
+            default:
+                return null;
+        }
     }
 }

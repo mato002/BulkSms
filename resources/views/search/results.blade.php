@@ -58,7 +58,7 @@
                     </div>
                     @if($contacts->hasPages())
                     <div class="card-footer bg-white">
-                        {{ $contacts->appends(['q' => $query])->links() }}
+                        {{ $contacts->appends(['q' => $query])->links('vendor.pagination.simple') }}
                     </div>
                     @endif
                 </div>
@@ -104,7 +104,7 @@
                     </div>
                     @if($messages->hasPages())
                     <div class="card-footer bg-white">
-                        {{ $messages->appends(['q' => $query])->links() }}
+                        {{ $messages->appends(['q' => $query])->links('vendor.pagination.simple') }}
                     </div>
                     @endif
                 </div>
@@ -158,7 +158,7 @@
                     </div>
                     @if($campaigns->hasPages())
                     <div class="card-footer bg-white">
-                        {{ $campaigns->appends(['q' => $query])->links() }}
+                        {{ $campaigns->appends(['q' => $query])->links('vendor.pagination.simple') }}
                     </div>
                     @endif
                 </div>
@@ -202,7 +202,7 @@
                     </div>
                     @if($templates->hasPages())
                     <div class="card-footer bg-white">
-                        {{ $templates->appends(['q' => $query])->links() }}
+                        {{ $templates->appends(['q' => $query])->links('vendor.pagination.simple') }}
                     </div>
                     @endif
                 </div>
@@ -246,7 +246,7 @@
                     </div>
                     @if($conversations->hasPages())
                     <div class="card-footer bg-white">
-                        {{ $conversations->appends(['q' => $query])->links() }}
+                        {{ $conversations->appends(['q' => $query])->links('vendor.pagination.simple') }}
                     </div>
                     @endif
                 </div>

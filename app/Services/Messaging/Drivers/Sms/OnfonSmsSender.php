@@ -54,6 +54,11 @@ class OnfonSmsSender implements MessageSender
         $bodyText = $resp->body();
         $response = $resp->json() ?? [];
 
+        // Clear balance cache after sending SMS to trigger immediate refresh
+        if ($status >= 200 && $status < 300) {
+            cache()->forget('onfon_system_balance');
+        }
+
         if ($status < 200 || $status >= 300) {
             throw new \RuntimeException("Onfon HTTP {$status}: {$bodyText}");
         }

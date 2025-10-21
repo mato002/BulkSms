@@ -813,10 +813,10 @@
 
         // Load notifications
         function loadNotifications() {
-            fetch('{{ route("notifications.index") }}')
+            fetch('{{ route("notifications.list") }}')
                 .then(response => response.json())
                 .then(data => {
-                    updateNotificationCount(data.unread_count);
+                    updateNotificationCount(data.notifications.filter(n => !n.read_at).length);
                     displayNotifications(data.notifications);
                 })
                 .catch(error => {
@@ -846,19 +846,29 @@
                 return;
             }
 
-            container.innerHTML = notifications.map(notification => `
-                <div class="notification-item ${!notification.is_read ? 'unread' : ''}" 
-                     onclick="markNotificationRead(${notification.id}, '${notification.link || '#'}')">
-                    <div class="notification-icon-wrapper bg-${notification.color}">
-                        <i class="bi ${notification.icon || 'bi-bell'}"></i>
+            container.innerHTML = notifications.map(notification => {
+                const data = notification.data || {};
+                const color = data.type === 'low_balance' ? 'warning' : 
+                             data.type === 'failed_delivery' ? 'danger' :
+                             data.type === 'campaign_complete' ? 'success' : 'primary';
+                const icon = data.type === 'low_balance' ? 'bi-exclamation-triangle' :
+                            data.type === 'failed_delivery' ? 'bi-x-circle' :
+                            data.type === 'campaign_complete' ? 'bi-check-circle' : 'bi-bell';
+                
+                return `
+                    <div class="notification-item ${!notification.read_at ? 'unread' : ''}" 
+                         onclick="markNotificationRead('${notification.id}', '${data.action_url || '#'}')">
+                        <div class="notification-icon-wrapper bg-${color}">
+                            <i class="bi ${icon}"></i>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-title">${data.title || 'Notification'}</div>
+                            <div class="notification-message">${data.message || ''}</div>
+                            <div class="notification-time">${notification.created_at || ''}</div>
+                        </div>
                     </div>
-                    <div class="notification-content">
-                        <div class="notification-title">${notification.title}</div>
-                        <div class="notification-message">${notification.message}</div>
-                        <div class="notification-time">${formatNotificationTime(notification.created_at)}</div>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         // Mark notification as read
@@ -872,13 +882,11 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    notificationsLoaded = false; // Reload on next open
-                    if (link && link !== '#') {
-                        window.location.href = link;
-                    } else {
-                        loadNotifications(); // Refresh the list
-                    }
+                notificationsLoaded = false; // Reload on next open
+                if (link && link !== '#') {
+                    window.location.href = link;
+                } else {
+                    loadNotifications(); // Refresh the list
                 }
             })
             .catch(error => console.error('Error:', error));

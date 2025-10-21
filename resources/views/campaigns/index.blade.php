@@ -220,7 +220,7 @@
         </div>
         @if($campaigns->hasPages())
         <div class="modern-card-footer">
-            {{ $campaigns->links() }}
+            {{ $campaigns->links('vendor.pagination.simple') }}
         </div>
         @endif
     </div>

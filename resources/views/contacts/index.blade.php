@@ -195,7 +195,7 @@
         </div>
         @if($contacts->hasPages())
         <div class="modern-card-footer">
-            {{ $contacts->links() }}
+            {{ $contacts->links('vendor.pagination.simple') }}
         </div>
         @endif
     </div>

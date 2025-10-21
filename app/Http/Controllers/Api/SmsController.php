@@ -27,7 +27,8 @@ class SmsController extends Controller
         $validator = Validator::make($request->all(), [
             'recipients' => 'required|array|max:1000',
             'recipients.*' => 'required|string|regex:/^254[0-9]{9}$/',
-            'message' => 'required|string|max:160',
+            // Allow longer than 160; segmentation will compute parts & cost
+            'message' => 'required|string|max:2000',
             'sender_id' => 'nullable|string|max:11',
             'schedule_time' => 'nullable|date|after:now'
         ]);
@@ -53,7 +54,7 @@ class SmsController extends Controller
             );
             
             $results[] = $result;
-            $totalCost += $result['cost'] ?? 0.75;
+            $totalCost += $result['cost'] ?? 0;
         }
 
         return response()->json([
