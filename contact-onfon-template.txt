@@ -1,0 +1,43 @@
+Subject: Request to Disable Sender ID Filter for Account
+
+Dear Onfon Media Support,
+
+I am writing to request that the sender ID filter/whitelist be disabled for our account.
+
+Account Details:
+- Client ID: e27847c1-a9fe-4eef-b60d-ddb291b175ab
+- API Key: VKft5j+GOeSXYSlk+sADT/nx5UMVpcmengSPk9Ou4Ak=
+
+Issue:
+We are experiencing errors when trying to send SMS with sender IDs that are not in the approved whitelist:
+"Onfon MessageErrorCode 401: Value filter failed for user [e27847c1-a9fe-4eef-b60d-ddb291b175ab] (source_address filter mismatch)."
+
+Business Model:
+We operate a multi-tenant SMS platform where:
+- We pay Onfon for SMS gateway services
+- Our clients pay us for SMS services
+- Each client has their own sender ID (e.g., "MATECHTE", "FORTRESS", etc.)
+
+Request:
+Since we are the paying customer managing multiple businesses, we need the ability to use ANY sender ID from our account without restrictions. Please disable the sender ID filter/whitelist for our account so we can use any sender ID our clients require.
+
+This will allow us to:
+- Onboard new clients without waiting for sender ID approval
+- Use any sender ID our clients are registered with
+- Scale our business more efficiently
+
+Please let us know if you need any additional information or documentation.
+
+Thank you for your assistance.
+
+Best regards,
+[Your Name]
+[Your Company]
+[Contact Information]
+
+
+
+
+
+
+

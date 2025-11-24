@@ -20,7 +20,7 @@
                 @if($campaign->status === 'draft')
                     <form action="{{ route('campaigns.send', $campaign->id) }}" method="POST" class="d-inline">
                         @csrf
-                        <button type="submit" class="btn-primary-modern" onclick="return confirm('Send this campaign now?')">
+                        <button type="submit" class="btn-primary-modern" onclick="confirmAction(event, 'Send Campaign?', 'Send this campaign now?', 'Yes, send it!')">
                             <i class="bi bi-send"></i>
                             <span>Send Campaign</span>
                         </button>

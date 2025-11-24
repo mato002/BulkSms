@@ -138,7 +138,7 @@
                         <tr>
                             <th class="px-4 py-3">Sender Details</th>
                             <th class="px-4 py-3">API Key</th>
-                            <th class="px-4 py-3">Balance</th>
+                            <th class="px-4 py-3">Balance (Bulk SMS / Onfon)</th>
                             <th class="px-4 py-3">Usage</th>
                             <th class="px-4 py-3">Status</th>
                             <th class="px-4 py-3 text-end">Actions</th>
@@ -172,7 +172,19 @@
                                     </div>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <span class="fw-semibold">{{ number_format($client->balance, 2) }}</span>
+                                    <div class="d-flex flex-column">
+                                        <div class="fw-semibold text-primary">
+                                            KES {{ number_format($client->balance, 2) }}
+                                        </div>
+                                        <div class="text-muted small">
+                                            {{ number_format($client->getBalanceInUnits(), 2) }} units
+                                        </div>
+                                        @if($client->onfon_balance !== null)
+                                            <div class="text-success small">
+                                                Onfon: {{ number_format($client->onfon_balance, 2) }}
+                                            </div>
+                                        @endif
+                                    </div>
                                 </td>
                                 <td class="px-4 py-3">
                                     <div>{{ $client->campaigns_count }} campaigns</div>
@@ -196,6 +208,11 @@
                                            class="btn btn-sm btn-outline-warning" 
                                            title="Edit">
                                             <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="{{ route('admin.senders.show', $client->id) }}#balance-management" 
+                                           class="btn btn-sm btn-outline-success" 
+                                           title="Manage Balance">
+                                            <i class="bi bi-cash-stack"></i>
                                         </a>
                                         <form action="{{ route('admin.senders.toggle-status', $client->id) }}" 
                                               method="POST" 

@@ -28,7 +28,8 @@ class CampaignController extends Controller
         $perPage = $request->get('per_page', 50);
         $status = $request->get('status');
 
-        $query = Campaign::where('client_id', $client->id);
+        $query = Campaign::where('client_id', $client->id)
+            ->with('client'); // Eager load client relationship
 
         if ($status) {
             $query->where('status', $status);

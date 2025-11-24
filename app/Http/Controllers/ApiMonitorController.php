@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\ApiLog;
 use App\Models\Client;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ApiMonitorController extends Controller
 {
@@ -45,7 +48,7 @@ class ApiMonitorController extends Controller
         }
         
         $logs = $query->paginate(50);
-        $clients = Client::all();
+        $clients = $this->getCachedClients();
         
         // Get statistics
         $stats = [
@@ -84,13 +87,15 @@ class ApiMonitorController extends Controller
         }
         
         // Apply period filter
-        $query->where('created_at', '>=', match($period) {
+        $startDate = match($period) {
             'day' => now()->startOfDay(),
             'week' => now()->startOfWeek(),
             'month' => now()->startOfMonth(),
             'year' => now()->startOfYear(),
             default => now()->startOfWeek(),
-        });
+        };
+        
+        $query->where('created_at', '>=', $startDate);
         
         // Get statistics
         $stats = [
@@ -110,21 +115,34 @@ class ApiMonitorController extends Controller
             ->limit(10)
             ->get();
         
-        // Get requests by hour (for today)
-        $hourlyStats = ApiLog::select(
+        // Get requests by hour - respect period and client filters
+        $hourlyQuery = ApiLog::query();
+        if ($clientId) {
+            $hourlyQuery->where('client_id', $clientId);
+        }
+        $hourlyQuery->where('created_at', '>=', $startDate);
+        
+        $hourlyStats = $hourlyQuery
+            ->select(
                 DB::raw('HOUR(created_at) as hour'),
                 DB::raw('count(*) as total')
             )
-            ->whereDate('created_at', today())
             ->groupBy('hour')
             ->orderBy('hour')
             ->get();
         
-        return response()->json([
-            'stats' => $stats,
-            'by_endpoint' => $endpointStats,
-            'by_hour' => $hourlyStats,
-        ]);
+        // If JSON is requested (API call), return JSON
+        if ($request->wantsJson() || $request->get('format') === 'json') {
+            return response()->json([
+                'stats' => $stats,
+                'by_endpoint' => $endpointStats,
+                'by_hour' => $hourlyStats,
+            ]);
+        }
+        
+        // Otherwise return view
+        $clients = $this->getCachedClients();
+        return view('api-monitor.statistics', compact('stats', 'endpointStats', 'hourlyStats', 'clients', 'clientId', 'period'));
     }
 
     /**
@@ -163,6 +181,21 @@ class ApiMonitorController extends Controller
         $deleted = ApiLog::where('created_at', '<', now()->subDays($days))->delete();
         
         return redirect()->back()->with('success', "Deleted {$deleted} old log entries (older than {$days} days)");
+    }
+
+    private function getCachedClients(): Collection
+    {
+        try {
+            return Cache::remember('api_monitor_clients', 300, function () {
+                return Client::select('id', 'name')->get();
+            });
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to cache API monitor clients', [
+                'message' => $exception->getMessage(),
+            ]);
+
+            return Client::select('id', 'name')->get();
+        }
     }
 }
 

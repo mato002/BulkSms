@@ -137,10 +137,10 @@
         </div>
         <div class="modern-card-body">
             <p class="text-muted mb-3">Once you delete this template, there is no going back. Please be certain.</p>
-            <form action="{{ route('templates.destroy', $template->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this template? This action cannot be undone.')">
+            <form action="{{ route('templates.destroy', $template->id) }}" method="POST" class="d-inline">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="btn-danger-modern">
+                <button type="submit" class="btn-danger-modern" onclick="confirmDelete(event, 'Are you sure you want to delete this template? This action cannot be undone.')">
                     <i class="bi bi-trash"></i>
                     <span>Delete Template</span>
                 </button>

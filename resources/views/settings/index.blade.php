@@ -101,9 +101,9 @@
                 </div>
             </div>
 
-            <form action="{{ route('settings.regenerate-api-key') }}" method="POST" onsubmit="return confirm('Regenerate API key? This will invalidate the current key and break existing integrations!')">
+            <form action="{{ route('settings.regenerate-api-key') }}" method="POST">
                 @csrf
-                <button type="submit" class="btn btn-warning">
+                <button type="submit" class="btn btn-warning" onclick="confirmAction(event, 'Regenerate API Key?', 'This will invalidate the current key and break existing integrations!', 'Yes, regenerate it!')">
                     <i class="bi bi-arrow-clockwise me-2"></i>Regenerate API Key
                 </button>
             </form>
@@ -155,15 +155,27 @@
             </h3>
         </div>
         <div class="modern-card-body">
-            @forelse($channelsWithCreds as $channel)
+            @foreach($channelsWithCreds as $channel)
+                @php
+                    $collapseId = 'channel-' . ($channel->id ?? $channel->name);
+                    $isSelectedChannel = isset($selectedChannel) && $selectedChannel === $channel->name;
+                @endphp
                 <div class="border rounded p-3 mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h6 class="mb-0">
-                            <span class="badge bg-secondary me-2">{{ strtoupper($channel->name) }}</span>
-                            {{ ucfirst($channel->provider) }} Provider
-                        </h6>
                         <div>
-                            @if($channel->active)
+                            <h6 class="mb-0">
+                                <i class="bi bi-{{ $channel->channel_info['icon'] ?? 'broadcast' }} me-2"></i>
+                                <span class="badge bg-secondary me-2">{{ strtoupper($channel->name) }}</span>
+                                {{ ucfirst($channel->provider) }} Provider
+                            </h6>
+                            @if(isset($channel->channel_info['description']))
+                                <small class="text-muted">{{ $channel->channel_info['description'] }}</small>
+                            @endif
+                        </div>
+                        <div>
+                            @if(isset($channel->exists) && !$channel->exists)
+                                <span class="badge bg-warning"><i class="bi bi-exclamation-triangle me-1"></i>Not Configured</span>
+                            @elseif($channel->active ?? false)
                                 <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Active</span>
                             @else
                                 <span class="badge bg-secondary"><i class="bi bi-x-circle me-1"></i>Inactive</span>
@@ -171,26 +183,42 @@
                         </div>
                     </div>
 
-                    <button class="btn-secondary-modern mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#channel-{{ $channel->id }}">
-                        <i class="bi bi-pencil"></i>
-                        <span>Edit Configuration</span>
-                    </button>
-
-                    <div class="collapse" id="channel-{{ $channel->id }}">
-                        <form action="{{ route('settings.channel.update', $channel->id) }}" method="POST" class="border-top pt-3">
+                    @if(isset($channel->exists) && !$channel->exists)
+                        <!-- Channel doesn't exist - show create button -->
+                        <form action="{{ route('settings.channel.create') }}" method="POST">
                             @csrf
+                            <input type="hidden" name="name" value="{{ $channel->name }}">
+                            <input type="hidden" name="provider" value="{{ $channel->provider }}">
+                            <button type="submit" class="btn-primary-modern">
+                                <i class="bi bi-plus-circle"></i>
+                                <span>Create {{ ucfirst($channel->name) }} Channel</span>
+                            </button>
+                            <p class="text-muted mt-2 mb-0">
+                                <small>This will create a new {{ ucfirst($channel->name) }} channel that you can then configure.</small>
+                            </p>
+                        </form>
+                    @else
+                        <!-- Channel exists - show edit form -->
+                        <button class="btn-secondary-modern mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#{{ $collapseId }}" aria-expanded="{{ $isSelectedChannel ? 'true' : 'false' }}">
+                            <i class="bi bi-pencil"></i>
+                            <span>Edit Configuration</span>
+                        </button>
 
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Status</label>
-                                    <select class="modern-select" name="active" required>
-                                        <option value="1" {{ $channel->active ? 'selected' : '' }}>Active</option>
-                                        <option value="0" {{ !$channel->active ? 'selected' : '' }}>Inactive</option>
-                                    </select>
+                        <div class="collapse {{ $isSelectedChannel ? 'show' : '' }}" id="{{ $collapseId }}">
+                            <form action="{{ route('settings.channel.update', $channel->id) }}" method="POST" class="border-top pt-3">
+                                @csrf
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Status</label>
+                                        <select class="modern-select" name="active" required>
+                                            <option value="1" {{ ($channel->active ?? false) ? 'selected' : '' }}>Active</option>
+                                            <option value="0" {{ !($channel->active ?? false) ? 'selected' : '' }}>Inactive</option>
+                                        </select>
+                                    </div>
                                 </div>
-                            </div>
 
-                            @if($channel->provider === 'onfon')
+                                @if($channel->provider === 'onfon')
                                 <h6 class="mt-4 mb-3 text-primary"><i class="bi bi-gear-fill me-2"></i>Onfon Credentials</h6>
                                 
                                 <div class="row g-3">
@@ -236,32 +264,91 @@
                                         <li>API endpoint: <code>https://api.onfonmedia.co.ke/v1/sms/SendBulkSMS</code></li>
                                     </ul>
                                 </div>
-                            @endif
+                                @elseif($channel->provider === 'smtp')
+                                    <h6 class="mt-4 mb-3 text-primary"><i class="bi bi-gear-fill me-2"></i>SMTP Email Credentials</h6>
+                                    
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold">SMTP Host</label>
+                                            <input type="text" class="modern-input" name="smtp_host" 
+                                                   value="{{ $channel->credentials_array['host'] ?? 'smtp.gmail.com' }}" 
+                                                   placeholder="smtp.gmail.com">
+                                        </div>
 
-                            <button type="submit" class="btn-primary-modern mt-3">
-                                <i class="bi bi-save"></i>
-                                <span>Save Channel Configuration</span>
-                            </button>
-                        </form>
-                    </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold">SMTP Port</label>
+                                            <input type="number" class="modern-input" name="smtp_port" 
+                                                   value="{{ $channel->credentials_array['port'] ?? 587 }}" 
+                                                   placeholder="587">
+                                        </div>
 
-                    <!-- Current Configuration Display -->
-                    <div class="mt-3">
-                        <small class="text-muted">
-                            <strong>Current Settings:</strong> 
-                            @if($channel->provider === 'onfon')
-                                API Key: <code class="text-muted">{{ isset($channel->credentials_array['api_key']) ? substr($channel->credentials_array['api_key'], 0, 20) . '...' : 'Not set' }}</code>
-                            @else
-                                Provider: {{ ucfirst($channel->provider) }}
-                            @endif
-                        </small>
-                    </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold">Username/Email</label>
+                                            <input type="text" class="modern-input" name="smtp_username" 
+                                                   value="{{ $channel->credentials_array['username'] ?? '' }}" 
+                                                   placeholder="your-email@gmail.com">
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold">Password</label>
+                                            <input type="password" class="modern-input" name="smtp_password" 
+                                                   value="{{ $channel->credentials_array['password'] ?? '' }}" 
+                                                   placeholder="Your email password or app password">
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold">Encryption</label>
+                                            <select class="modern-select" name="smtp_encryption">
+                                                <option value="tls" {{ ($channel->credentials_array['encryption'] ?? 'tls') === 'tls' ? 'selected' : '' }}>TLS</option>
+                                                <option value="ssl" {{ ($channel->credentials_array['encryption'] ?? '') === 'ssl' ? 'selected' : '' }}>SSL</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold">From Email</label>
+                                            <input type="email" class="modern-input" name="from_email" 
+                                                   value="{{ $channel->credentials_array['from_email'] ?? '' }}" 
+                                                   placeholder="noreply@example.com">
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold">From Name</label>
+                                            <input type="text" class="modern-input" name="from_name" 
+                                                   value="{{ $channel->credentials_array['from_name'] ?? '' }}" 
+                                                   placeholder="Your Company Name">
+                                        </div>
+                                    </div>
+                                @elseif($channel->provider === 'ultramsg' || $channel->provider === 'whatsapp_cloud')
+                                    <h6 class="mt-4 mb-3 text-primary"><i class="bi bi-gear-fill me-2"></i>WhatsApp Credentials</h6>
+                                    <div class="alert alert-info">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        <strong>Note:</strong> WhatsApp channels are configured via the <a href="{{ route('whatsapp.configure') }}">WhatsApp Configuration</a> page.
+                                    </div>
+                                @endif
+
+                                <button type="submit" class="btn-primary-modern mt-3">
+                                    <i class="bi bi-save"></i>
+                                    <span>Save Channel Configuration</span>
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Current Configuration Display -->
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <strong>Current Settings:</strong> 
+                                @if($channel->provider === 'onfon')
+                                    API Key: <code class="text-muted">{{ isset($channel->credentials_array['api_key']) && !empty($channel->credentials_array['api_key']) ? substr($channel->credentials_array['api_key'], 0, 20) . '...' : 'Not set' }}</code>
+                                @elseif($channel->provider === 'smtp')
+                                    Host: <code class="text-muted">{{ $channel->credentials_array['host'] ?? 'Not set' }}</code>
+                                @else
+                                    Provider: {{ ucfirst($channel->provider) }}
+                                @endif
+                            </small>
+                        </div>
+                    @endif
                 </div>
-            @empty
-                <p class="text-muted text-center py-3">
-                    <i class="bi bi-inbox"></i> No channels configured yet.
-                </p>
-            @endforelse
+            @endforeach
         </div>
     </div>
 
@@ -435,11 +522,17 @@ function copyToClipboard(text) {
                         <div class="input-group">
                             <input type="text" 
                                    class="form-control" 
-                                   value="{{ number_format(cache()->get('onfon_system_balance', 0), 2) }}" 
+                                   value="{{ number_format($onfonBalance, 2) }}" 
                                    readonly>
                             <span class="input-group-text">units</span>
                         </div>
-                        <div class="form-text">Last refreshed: {{ cache()->has('onfon_system_balance') ? 'Recently' : 'Never' }}</div>
+                        <div class="form-text">
+                            @if($onfonCacheAvailable)
+                                Last refreshed: {{ $onfonBalanceLastRefreshed }}
+                            @else
+                                Cache unavailable – showing fallback value.
+                            @endif
+                        </div>
                     </div>
                 </div>
 
@@ -497,7 +590,7 @@ function copyToClipboard(text) {
                                             </a>
                                             <a href="{{ route('settings.phone.delete', $phone->id) }}" 
                                                class="btn btn-outline-danger"
-                                               onclick="return confirm('Are you sure you want to delete this phone number?')"
+                                               onclick="event.preventDefault(); Swal.fire({title: 'Are you sure?', text: 'Are you sure you want to delete this phone number?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', cancelButtonColor: '#3085d6', confirmButtonText: 'Yes, delete it!', cancelButtonText: 'Cancel', reverseButtons: true}).then((result) => { if (result.isConfirmed) { window.location.href = '{{ route('settings.phone.delete', $phone->id) }}'; } });"
                                                title="Delete">
                                                 <i class="bi bi-trash"></i>
                                             </a>

@@ -4,6 +4,7 @@ namespace App\Services\Messaging\Drivers\WhatsApp;
 
 use App\Services\Messaging\Contracts\MessageSender;
 use App\Services\Messaging\DTO\OutboundMessage;
+use App\Support\PhoneNumber;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -274,16 +275,7 @@ class UltraMessageSender implements MessageSender
      */
     private function formatPhoneNumber(string $phone): string
     {
-        // Remove all non-numeric characters except +
-        $phone = preg_replace('/[^0-9+]/', '', $phone);
-        
-        // UltraMsg accepts numbers with or without +
-        // We'll keep + if present, add it if not and it's an international number
-        if (!str_starts_with($phone, '+') && strlen($phone) > 10) {
-            $phone = '+' . $phone;
-        }
-
-        return $phone;
+        return PhoneNumber::e164($phone);
     }
 
     public function channel(): string

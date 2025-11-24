@@ -21,7 +21,8 @@ class ContactController extends Controller
         $department = $request->get('department');
         $search = $request->get('search');
 
-        $query = Contact::where('client_id', $client->id);
+        $query = Contact::where('client_id', $client->id)
+            ->with('client'); // Eager load client relationship
 
         if ($department) {
             $query->where('department', $department);

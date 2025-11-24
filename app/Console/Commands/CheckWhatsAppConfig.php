@@ -36,7 +36,7 @@ class CheckWhatsAppConfig extends Command
 
         $this->info('✅ WhatsApp channel found');
         $this->info("Provider: {$channel->provider}");
-        $this->info("Status: " . ($channel->is_active ? 'Active' : 'Inactive'));
+        $this->info("Status: " . ($channel->active ? 'Active' : 'Inactive'));
         
         $credentials = is_string($channel->credentials) 
             ? json_decode($channel->credentials, true) 

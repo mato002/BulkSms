@@ -6,6 +6,7 @@ use App\Models\Channel;
 use App\Models\Contact;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\Notification as CustomNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -490,6 +491,19 @@ class WhatsAppWebhookController extends Controller
         $contact->last_contact_at = now();
         $contact->conversation_id = $conversation->id;
         $contact->save();
+
+        // Create notification for new message
+        try {
+            CustomNotification::newMessage(
+                $channel->client_id,
+                $contact->name,
+                $content['body'],
+                $conversation->id,
+                'whatsapp'
+            );
+        } catch (\Exception $e) {
+            Log::warning('Failed to create message notification', ['error' => $e->getMessage()]);
+        }
 
         Log::info('WhatsApp inbound message processed', [
             'message_id' => $messageId,

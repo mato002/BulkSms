@@ -4,6 +4,7 @@ namespace App\Services\Messaging\Drivers\WhatsApp;
 
 use App\Services\Messaging\Contracts\MessageSender;
 use App\Services\Messaging\DTO\OutboundMessage;
+use App\Support\PhoneNumber;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -201,19 +202,7 @@ class CloudWhatsAppSender implements MessageSender
      */
     private function formatPhoneNumber(string $phone): string
     {
-        // Remove all non-numeric characters except +
-        $phone = preg_replace('/[^0-9+]/', '', $phone);
-        
-        // Remove leading + if present
-        $phone = ltrim($phone, '+');
-        
-        // Ensure it has country code (add default if needed)
-        // You might want to configure a default country code
-        if (strlen($phone) < 10) {
-            throw new \InvalidArgumentException('Invalid phone number format');
-        }
-        
-        return $phone;
+        return ltrim(PhoneNumber::withCountryCode($phone), '+');
     }
 
     public function channel(): string

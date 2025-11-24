@@ -99,10 +99,10 @@
         </div>
         <div class="modern-card-body">
             <p class="text-muted mb-3">Once you delete this contact, all associated messages will be lost. Please be certain.</p>
-            <form action="{{ route('contacts.destroy', $contact->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this contact?')">
+            <form action="{{ route('contacts.destroy', $contact->id) }}" method="POST" class="d-inline">
                 @csrf
                 @method('DELETE')
-                <button type="submit" class="btn-danger-modern">
+                <button type="submit" class="btn-danger-modern" onclick="confirmDelete(event, 'Are you sure you want to delete this contact? All associated messages will be lost. This action cannot be undone.')">
                     <i class="bi bi-trash"></i>
                     <span>Delete Contact</span>
                 </button>

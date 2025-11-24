@@ -167,6 +167,7 @@
                             <th>Method</th>
                             <th>Endpoint</th>
                             <th>IP Address</th>
+                            <th>Result</th>
                             <th>Status</th>
                             <th>Response Time</th>
                             <th>Actions</th>
@@ -175,7 +176,7 @@
                     <tbody>
                         @forelse($logs as $log)
                             <tr class="{{ !$log->success ? 'table-danger' : '' }}">
-                                <td>
+                                <td class="text-nowrap">
                                     <small>{{ $log->created_at->format('Y-m-d H:i:s') }}</small><br>
                                     <small class="text-muted">{{ $log->created_at->diffForHumans() }}</small>
                                 </td>
@@ -196,6 +197,18 @@
                                 </td>
                                 <td>
                                     @if($log->success)
+                                        <span class="badge bg-success"><i class="fas fa-check me-1"></i>Success</span>
+                                    @else
+                                        <span class="badge bg-danger"><i class="fas fa-times me-1"></i>Failed</span>
+                                    @endif
+                                    @if(!$log->success && $log->error_message)
+                                        <div class="text-danger small mt-1" title="{{ $log->error_message }}">
+                                            {{ \Illuminate\Support\Str::limit($log->error_message, 45) }}
+                                        </div>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($log->success)
                                         <span class="badge bg-success">
                                             <i class="fas fa-check"></i> {{ $log->response_status }}
                                         </span>
@@ -209,6 +222,9 @@
                                     <span class="badge bg-{{ $log->response_time_ms < 1000 ? 'success' : ($log->response_time_ms < 3000 ? 'warning' : 'danger') }}">
                                         {{ number_format($log->response_time_ms, 0) }}ms
                                     </span>
+                                    <div class="small text-muted">
+                                        {{ $log->response_time_ms < 1000 ? 'Fast' : ($log->response_time_ms < 3000 ? 'Moderate' : 'Slow') }}
+                                    </div>
                                 </td>
                                 <td>
                                     <a href="{{ route('api-monitor.show', $log->id) }}" class="btn btn-sm btn-info" title="View Details">

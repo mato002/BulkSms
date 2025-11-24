@@ -124,10 +124,10 @@
                         <form action="{{ route('admin.senders.regenerate-api-key', $client->id) }}" 
                               method="POST" 
                               class="d-inline"
-                              onsubmit="return confirm('Are you sure? The old API key will stop working immediately.');">
+                              >
                             @csrf
                             @method('POST')
-                            <button type="submit" class="btn btn-warning">
+                            <button type="submit" class="btn btn-warning" onclick="confirmAction(event, 'Regenerate API Key?', 'The old API key will stop working immediately. This will break existing integrations!', 'Yes, regenerate it!')">
                                 <i class="bi bi-arrow-clockwise me-1"></i>Regenerate
                             </button>
                         </form>
@@ -305,10 +305,10 @@
                             </div>
                             <form action="{{ route('admin.senders.destroy', $client->id) }}" 
                                   method="POST" 
-                                  onsubmit="return confirm('Are you absolutely sure? This will permanently delete the sender and all associated data.');">
+                                  >
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-danger">
+                                <button type="submit" class="btn btn-danger" onclick="confirmDelete(event, 'Are you absolutely sure? This will permanently delete the sender and all associated data. This action cannot be undone.')">
                                     <i class="bi bi-trash me-1"></i>Delete Sender
                                 </button>
                             </form>

@@ -7,6 +7,7 @@
     <title>{{ config('app.name', 'Laravel') }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @stack('styles')
     <style>
         :root {
@@ -44,12 +45,15 @@
             color: #e2e8f0;
             z-index: 1000;
             overflow-y: auto;
-            transition: transform 0.3s ease;
+            transition: width 0.3s ease, transform 0.3s ease;
         }
 
         .sidebar-header {
             padding: 1.5rem 1.25rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .sidebar-brand {
@@ -67,6 +71,25 @@
             color: var(--sidebar-active);
         }
 
+        .sidebar-toggle-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-toggle-btn:hover {
+            background: var(--sidebar-hover);
+            color: #ffffff;
+        }
+
         .sidebar-nav {
             padding: 1.5rem 0;
         }
@@ -78,6 +101,45 @@
             text-transform: uppercase;
             color: #94a3b8;
             letter-spacing: 0.05em;
+        }
+
+        .nav-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #94a3b8;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-section-header:hover {
+            background: var(--sidebar-hover);
+            color: #ffffff;
+        }
+
+        .nav-section-header .collapse-icon {
+            font-size: 0.7rem;
+            transition: transform 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .nav-section-header[aria-expanded="true"] .collapse-icon {
+            transform: rotate(180deg);
+        }
+
+        .nav-section-header + .collapse {
+            transition: all 0.3s ease;
+        }
+
+        .nav-section-header + .collapse.show {
+            display: block;
         }
 
         .sidebar-nav-item {
@@ -107,6 +169,61 @@
             width: 24px;
             font-size: 1.25rem;
             margin-right: 0.875rem;
+            flex-shrink: 0;
+        }
+
+        /* Collapsed Sidebar Styles */
+        .sidebar.collapsed {
+            width: 80px;
+        }
+
+        .sidebar.collapsed .sidebar-brand span,
+        .sidebar.collapsed .sidebar-nav-item span,
+        .sidebar.collapsed .nav-section-title,
+        .sidebar.collapsed .nav-section-header span,
+        .sidebar.collapsed .badge {
+            opacity: 0;
+            width: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            transition: opacity 0.2s ease, width 0.3s ease;
+        }
+
+        .sidebar-brand span,
+        .sidebar-nav-item span {
+            transition: opacity 0.2s ease, width 0.3s ease;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            justify-content: center;
+            padding: 1.5rem 0.5rem;
+        }
+
+        .sidebar.collapsed .sidebar-brand {
+            gap: 0;
+        }
+
+        .sidebar.collapsed .sidebar-toggle-btn {
+            position: absolute;
+            right: 0.5rem;
+        }
+
+        .sidebar.collapsed .sidebar-nav-item {
+            justify-content: center;
+            padding: 0.875rem 0;
+        }
+
+        .sidebar.collapsed .sidebar-nav-item i {
+            margin-right: 0;
+        }
+
+        /* Adjust main content when sidebar is collapsed */
+        .sidebar.collapsed ~ .main-header {
+            left: 80px;
+        }
+
+        .sidebar.collapsed ~ .sidebar-overlay ~ .main-wrapper {
+            margin-left: 80px;
         }
 
         /* Header Styles */
@@ -118,11 +235,12 @@
             height: var(--header-height);
             background: var(--header-bg);
             border-bottom: 1px solid #e2e8f0;
-            z-index: 999;
+            z-index: 1000;
             display: flex;
             align-items: center;
             padding: 0 2rem;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: left 0.3s ease;
         }
 
         .header-left {
@@ -342,6 +460,7 @@
             min-height: calc(100vh - var(--header-height));
             display: flex;
             flex-direction: column;
+            transition: margin-left 0.3s ease;
         }
 
         .main-content {
@@ -404,11 +523,34 @@
                 transform: translateX(0);
             }
 
+            .sidebar.collapsed {
+                width: var(--sidebar-width);
+            }
+
+            .sidebar.collapsed .sidebar-brand span,
+            .sidebar.collapsed .sidebar-nav-item span,
+            .sidebar.collapsed .nav-section-title,
+            .sidebar.collapsed .badge {
+                opacity: 1;
+                width: auto;
+            }
+
+            .sidebar.collapsed .sidebar-nav-item {
+                justify-content: flex-start;
+                padding: 0.875rem 1.25rem;
+            }
+
+            .sidebar.collapsed .sidebar-nav-item i {
+                margin-right: 0.875rem;
+            }
+
+            .sidebar.collapsed ~ .main-header,
             .main-header {
                 left: 0;
                 padding: 0 1rem;
             }
 
+            .sidebar.collapsed ~ .sidebar-overlay ~ .main-wrapper,
             .main-wrapper {
                 margin-left: 0;
             }
@@ -423,6 +565,10 @@
 
             .header-right {
                 gap: 1rem;
+            }
+
+            .sidebar-toggle-btn {
+                display: none !important;
             }
         }
 
@@ -676,6 +822,9 @@
                 <i class="bi bi-chat-dots-fill"></i>
                 <span>BulkSms</span>
             </a>
+            <button class="sidebar-toggle-btn" id="sidebarToggle" title="Toggle Sidebar">
+                <i class="bi bi-chevron-left"></i>
+            </button>
         </div>
         <nav class="sidebar-nav">
             @include('layouts.sidebar')
@@ -743,7 +892,7 @@
                 <ul class="dropdown-menu dropdown-menu-end">
                     @auth
                         <li><a class="dropdown-item" href="{{ route('profile.show') }}"><i class="bi bi-person me-2"></i> Profile</a></li>
-                        <li><a class="dropdown-item" href="{{ route('settings.index') }}"><i class="bi bi-gear me-2"></i> Settings</a></li>
+                        <li><a class="dropdown-item" href="{{ route('home') }}"><i class="bi bi-house me-2"></i> Landing Page</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <form action="{{ route('logout') }}" method="POST">
@@ -774,10 +923,10 @@
             <div class="footer-content">
                 <p class="footer-text">&copy; {{ date('Y') }} BulkSms by Matech Technologies. All rights reserved.</p>
                 <div class="footer-links">
-                    <a href="#">Documentation</a>
-                    <a href="#">Support</a>
-                    <a href="#">Privacy Policy</a>
-                    <a href="#">Terms of Service</a>
+                    <a href="{{ route('documentation') }}">Documentation</a>
+                    <a href="{{ route('support') }}">Support</a>
+                    <a href="{{ route('privacy-policy') }}">Privacy Policy</a>
+                    <a href="{{ route('terms-of-service') }}">Terms of Service</a>
                 </div>
             </div>
         </footer>
@@ -785,11 +934,43 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Mobile menu toggle
+        // Sidebar elements
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
         const sidebarOverlay = document.getElementById('sidebarOverlay');
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const toggleIcon = sidebarToggle?.querySelector('i');
 
+        // Load saved sidebar state from localStorage
+        const sidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        if (sidebarCollapsed && window.innerWidth > 992) {
+            sidebar.classList.add('collapsed');
+            if (toggleIcon) {
+                toggleIcon.classList.remove('bi-chevron-left');
+                toggleIcon.classList.add('bi-chevron-right');
+            }
+        }
+
+        // Desktop sidebar collapse toggle
+        sidebarToggle?.addEventListener('click', () => {
+            const isCollapsed = sidebar.classList.toggle('collapsed');
+            
+            // Update icon
+            if (toggleIcon) {
+                if (isCollapsed) {
+                    toggleIcon.classList.remove('bi-chevron-left');
+                    toggleIcon.classList.add('bi-chevron-right');
+                } else {
+                    toggleIcon.classList.remove('bi-chevron-right');
+                    toggleIcon.classList.add('bi-chevron-left');
+                }
+            }
+            
+            // Save state to localStorage
+            localStorage.setItem('sidebarCollapsed', isCollapsed);
+        });
+
+        // Mobile menu toggle
         menuToggle?.addEventListener('click', () => {
             sidebar.classList.toggle('show');
             sidebarOverlay.classList.toggle('show');
@@ -798,6 +979,95 @@
         sidebarOverlay?.addEventListener('click', () => {
             sidebar.classList.remove('show');
             sidebarOverlay.classList.remove('show');
+        });
+
+        // Reset collapsed state on mobile
+        window.addEventListener('resize', () => {
+            if (window.innerWidth <= 992) {
+                sidebar.classList.remove('collapsed');
+                if (toggleIcon) {
+                    toggleIcon.classList.remove('bi-chevron-right');
+                    toggleIcon.classList.add('bi-chevron-left');
+                }
+                disableTooltips();
+            } else {
+                // Restore saved state on desktop
+                const savedState = localStorage.getItem('sidebarCollapsed') === 'true';
+                if (savedState) {
+                    sidebar.classList.add('collapsed');
+                    if (toggleIcon) {
+                        toggleIcon.classList.remove('bi-chevron-left');
+                        toggleIcon.classList.add('bi-chevron-right');
+                    }
+                    enableTooltips();
+                } else {
+                    disableTooltips();
+                }
+            }
+        });
+
+        // Tooltip management
+        let tooltipList = [];
+
+        function enableTooltips() {
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('.sidebar-nav-item[data-bs-toggle="tooltip"]'));
+            tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl, {
+                    trigger: 'hover',
+                    container: 'body'
+                });
+            });
+        }
+
+        function disableTooltips() {
+            tooltipList.forEach(tooltip => tooltip.dispose());
+            tooltipList = [];
+        }
+
+        // Initialize tooltips if sidebar is collapsed on load
+        if (sidebar.classList.contains('collapsed') && window.innerWidth > 992) {
+            enableTooltips();
+        }
+
+        // Handle collapsible sidebar sections
+        document.addEventListener('DOMContentLoaded', function() {
+            const collapseElements = document.querySelectorAll('.nav-section-header[data-bs-toggle="collapse"]');
+            
+            collapseElements.forEach(function(header) {
+                const targetId = header.getAttribute('data-bs-target');
+                const collapseElement = document.querySelector(targetId);
+                
+                if (collapseElement) {
+                    // Update icon rotation when collapse state changes
+                    collapseElement.addEventListener('show.bs.collapse', function() {
+                        header.setAttribute('aria-expanded', 'true');
+                        const icon = header.querySelector('.collapse-icon');
+                        if (icon) {
+                            icon.style.transform = 'rotate(180deg)';
+                        }
+                    });
+                    
+                    collapseElement.addEventListener('hide.bs.collapse', function() {
+                        header.setAttribute('aria-expanded', 'false');
+                        const icon = header.querySelector('.collapse-icon');
+                        if (icon) {
+                            icon.style.transform = 'rotate(0deg)';
+                        }
+                    });
+                }
+            });
+        });
+
+        // Update tooltips when sidebar toggle is clicked
+        const originalToggleListener = sidebarToggle?.onclick;
+        sidebarToggle?.addEventListener('click', function() {
+            setTimeout(() => {
+                if (sidebar.classList.contains('collapsed')) {
+                    enableTooltips();
+                } else {
+                    disableTooltips();
+                }
+            }, 100);
         });
 
         // Notification System
@@ -850,10 +1120,21 @@
                 const data = notification.data || {};
                 const color = data.type === 'low_balance' ? 'warning' : 
                              data.type === 'failed_delivery' ? 'danger' :
-                             data.type === 'campaign_complete' ? 'success' : 'primary';
+                             data.type === 'campaign_complete' ? 'success' :
+                             data.type === 'security_login_success' ? 'success' :
+                             data.type === 'security_login_success_user' ? 'info' :
+                             data.type === 'security_login_failed' ? 'danger' :
+                             data.type === 'security_login_failed_admin' ? 'warning' :
+                             data.type === 'new_message' ? 'primary' : 'primary';
+                
                 const icon = data.type === 'low_balance' ? 'bi-exclamation-triangle' :
                             data.type === 'failed_delivery' ? 'bi-x-circle' :
-                            data.type === 'campaign_complete' ? 'bi-check-circle' : 'bi-bell';
+                            data.type === 'campaign_complete' ? 'bi-check-circle' :
+                            data.type === 'security_login_success' ? 'bi-shield-check' :
+                            data.type === 'security_login_success_user' ? 'bi-person-check' :
+                            data.type === 'security_login_failed' ? 'bi-shield-exclamation' :
+                            data.type === 'security_login_failed_admin' ? 'bi-shield-exclamation' :
+                            data.type === 'new_message' ? 'bi-chat-dots' : 'bi-bell';
                 
                 return `
                     <div class="notification-item ${!notification.read_at ? 'unread' : ''}" 
@@ -985,9 +1266,15 @@
 
         function performSearch(query) {
             fetch('{{ route("search.api") }}?q=' + encodeURIComponent(query))
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.success && data.results.length > 0) {
+                    console.log('Search response:', data); // Debug log
+                    if (data.success && data.results && data.results.length > 0) {
                         displaySearchResults(data.results, query);
                     } else {
                         searchResults.innerHTML = '<div class="search-no-results"><i class="bi bi-search display-6"></i><p class="mt-2">No results found for "' + escapeHtml(query) + '"</p></div>';
@@ -995,7 +1282,7 @@
                 })
                 .catch(error => {
                     console.error('Search error:', error);
-                    searchResults.innerHTML = '<div class="search-no-results"><i class="bi bi-exclamation-triangle display-6"></i><p class="mt-2">Error performing search</p></div>';
+                    searchResults.innerHTML = '<div class="search-no-results"><i class="bi bi-exclamation-triangle display-6"></i><p class="mt-2">Error performing search. Check console for details.</p></div>';
                 });
         }
 
@@ -1037,6 +1324,53 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+    </script>
+    
+    <!-- SweetAlert Delete Confirmation -->
+    <script>
+        // Reusable delete confirmation function
+        function confirmDelete(event, message = 'Are you sure you want to delete this item? This action cannot be undone.') {
+            event.preventDefault();
+            const form = event.target.closest('form');
+            
+            Swal.fire({
+                title: 'Are you sure?',
+                text: message,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
+        }
+
+        // Reusable confirmation function for other actions
+        function confirmAction(event, title = 'Are you sure?', message = 'This action cannot be undone.', confirmText = 'Yes, proceed!') {
+            event.preventDefault();
+            const form = event.target.closest('form');
+            
+            Swal.fire({
+                title: title,
+                text: message,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: confirmText,
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit();
+                }
+            });
         }
     </script>
     @stack('scripts')

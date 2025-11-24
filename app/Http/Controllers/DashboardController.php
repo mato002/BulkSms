@@ -2,14 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\DB;
 use App\Models\Campaign;
-use App\Models\Client;
 use App\Models\Channel;
-use App\Services\OnfonWalletService;
+use App\Models\Client;
+use App\Services\Monitoring\BusinessMetricsService;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        private readonly BusinessMetricsService $businessMetricsService
+    ) {
+    }
+
     public function index()
     {
         // Get client from session or default to 1
@@ -96,8 +104,9 @@ class DashboardController extends Controller
             ];
         }
 
-        // Recent campaigns (last 5)
+        // Recent campaigns (last 5) - with eager loading
         $recentCampaigns = Campaign::where('client_id', $clientId)
+            ->with('client')
             ->orderBy('id', 'desc')
             ->limit(5)
             ->get();
@@ -130,6 +139,8 @@ class DashboardController extends Controller
             ->orderBy('scheduled_at')
             ->first();
 
+        $businessMetrics = $this->businessMetricsService->forDashboard($clientId, $isAdmin);
+
         return view('dashboard', compact(
             'stats',
             'messagesByChannel',
@@ -139,7 +150,8 @@ class DashboardController extends Controller
             'channelPerformance',
             'nextScheduledCampaign',
             'currentClient',
-            'isAdmin'
+            'isAdmin',
+            'businessMetrics'
         ));
     }
 
@@ -196,7 +208,8 @@ class DashboardController extends Controller
     private function getSystemOnfonBalance()
     {
         // First try to get from cache (refreshed every hour)
-        $cachedBalance = cache()->get('onfon_system_balance');
+        $cacheKey = 'onfon_system_balance';
+        $cachedBalance = $this->getCachedOnfonBalance($cacheKey);
         if ($cachedBalance !== null) {
             return $cachedBalance;
         }
@@ -207,13 +220,13 @@ class DashboardController extends Controller
 
         // Skip if credentials are not configured (placeholder values)
         if (empty($apiKey) || $apiKey === 'your_onfon_api_key_here') {
-            \Illuminate\Support\Facades\Log::warning('Onfon credentials not configured in .env file');
+            Log::warning('Onfon credentials not configured in .env file');
             return 0;
         }
 
         // If not in cache, fetch from API
         try {
-            $response = \Illuminate\Support\Facades\Http::timeout(30)
+            $response = Http::timeout(30)
                 ->withOptions(['verify' => false])
                 ->withHeaders([
                     'Content-Type' => 'application/json',
@@ -229,19 +242,46 @@ class DashboardController extends Controller
                 if (isset($data['Data'][0]['Credits'])) {
                     $balance = (float) $data['Data'][0]['Credits'];
                     // Cache for 15 minutes (to reflect real-time changes)
-                    cache()->put('onfon_system_balance', $balance, now()->addMinutes(15));
+                    $this->cacheOnfonBalance($cacheKey, $balance, 15);
                     return $balance;
                 }
             }
 
-            \Illuminate\Support\Facades\Log::error('Onfon balance fetch failed', [
+            Log::error('Onfon balance fetch failed', [
                 'status' => $response->status(),
                 'response' => $response->body()
             ]);
             return 0;
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Onfon balance exception: ' . $e->getMessage());
+            Log::error('Onfon balance exception', ['message' => $e->getMessage()]);
             return 0;
+        }
+    }
+
+    private function getCachedOnfonBalance(string $cacheKey): ?float
+    {
+        try {
+            $value = Cache::get($cacheKey);
+            return $value !== null ? (float) $value : null;
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to read cached Onfon balance', [
+                'key' => $cacheKey,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    private function cacheOnfonBalance(string $cacheKey, float $balance, int $minutes): void
+    {
+        try {
+            Cache::put($cacheKey, $balance, now()->addMinutes($minutes));
+        } catch (\Throwable $exception) {
+            Log::warning('Failed to cache Onfon balance', [
+                'key' => $cacheKey,
+                'message' => $exception->getMessage(),
+            ]);
         }
     }
 }

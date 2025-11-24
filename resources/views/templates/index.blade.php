@@ -155,10 +155,10 @@
                                     <a href="{{ route('templates.edit', $template->id) }}" class="btn-action btn-action-primary" title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <form action="{{ route('templates.destroy', $template->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this template?')">
+                                    <form action="{{ route('templates.destroy', $template->id) }}" method="POST" class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn-action btn-action-danger" title="Delete">
+                                        <button type="submit" class="btn-action btn-action-danger" title="Delete" onclick="confirmDelete(event, 'Delete this template? This action cannot be undone.')">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>

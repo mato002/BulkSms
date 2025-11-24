@@ -189,9 +189,9 @@
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     @if($campaign->status === 'draft')
-                                        <form action="{{ route('campaigns.send', $campaign->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Send this campaign now?')">
+                                        <form action="{{ route('campaigns.send', $campaign->id) }}" method="POST" class="d-inline">
                                             @csrf
-                                            <button type="submit" class="btn-action btn-action-success" title="Send">
+                                            <button type="submit" class="btn-action btn-action-success" title="Send" onclick="confirmAction(event, 'Send Campaign?', 'Send this campaign now?', 'Yes, send it!')">
                                                 <i class="bi bi-send"></i>
                                             </button>
                                         </form>

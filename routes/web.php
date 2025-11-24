@@ -34,6 +34,28 @@ Route::get('/api-documentation', function() {
     return view('api-documentation');
 })->name('api.documentation');
 
+// Public Pages (no authentication required)
+Route::get('/documentation', function() {
+    return view('pages.documentation');
+})->name('documentation');
+
+Route::get('/support', function() {
+    return view('pages.support');
+})->name('support');
+
+Route::get('/privacy-policy', function() {
+    return view('pages.privacy-policy');
+})->name('privacy-policy');
+
+Route::get('/terms-of-service', function() {
+    return view('pages.terms-of-service');
+})->name('terms-of-service');
+
+// Tenant Registration Routes (for new businesses to sign up)
+Route::get('/register', [App\Http\Controllers\TenantRegistrationController::class, 'showRegistration'])->name('tenant.register');
+Route::post('/register', [App\Http\Controllers\TenantRegistrationController::class, 'register'])->name('tenant.register.submit');
+Route::get('/registration-success', [App\Http\Controllers\TenantRegistrationController::class, 'showSuccess'])->name('tenant.registration.success');
+
 // Short URL Redirect (no authentication required) - Ultra short!
 Route::get('/x/{code}', [App\Http\Controllers\ShortLinkController::class, 'redirect'])->name('short.redirect');
 
@@ -49,8 +71,6 @@ Route::post('/webhook/whatsapp', [WhatsAppWebhookController::class, 'handle'])->
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login']);
-    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AuthController::class, 'register']);
     
     // Password Reset Routes
     Route::get('/forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.request');
@@ -116,7 +136,7 @@ Route::get('/', function() {
     return view('welcome');
 })->name('home');
 
-// Admin notification page (for monitoring password resets)
+// Admin notification page (for monitoring password resets) - ADMIN ONLY
 Route::get('/admin/security-logs', function() {
     $logFile = storage_path('logs/laravel.log');
     $logs = [];
@@ -136,23 +156,35 @@ Route::get('/admin/security-logs', function() {
     }
     
     return view('admin.security-logs', compact('logs'));
-})->name('admin.security-logs')->middleware('auth');
+})->name('admin.security-logs')->middleware(['auth', 'admin']);
 
 // Protected Routes (require authentication)
 Route::middleware(['auth'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', function() {
+        $user = auth()->user();
+        // Redirect tenants to their dashboard, admins to main dashboard
+        if ($user->client_id && $user->client_id !== 1) {
+            return redirect()->route('tenant.dashboard');
+        }
+        return app(DashboardController::class)->index();
+    })->name('dashboard');
 
-    // Search
+    // Search (Available to all authenticated users)
     Route::get('/search', [App\Http\Controllers\SearchController::class, 'showResults'])->name('search.results');
     Route::get('/api/search', [App\Http\Controllers\SearchController::class, 'search'])->name('search.api');
-    
-    // API Monitor
-    Route::get('/api-monitor', [App\Http\Controllers\ApiMonitorController::class, 'index'])->name('api-monitor.index');
-    Route::get('/api-monitor/{id}', [App\Http\Controllers\ApiMonitorController::class, 'show'])->name('api-monitor.show');
-    Route::get('/api-monitor-stats', [App\Http\Controllers\ApiMonitorController::class, 'statistics'])->name('api-monitor.statistics');
-    Route::get('/api-monitor-activity', [App\Http\Controllers\ApiMonitorController::class, 'activity'])->name('api-monitor.activity');
-    Route::post('/api-monitor/cleanup', [App\Http\Controllers\ApiMonitorController::class, 'cleanup'])->name('api-monitor.cleanup');
 
+    // ADMIN ONLY ROUTES - Require admin role
+    Route::middleware('admin')->group(function () {
+        // API Monitor (Admin only)
+        Route::get('/api-monitor', [App\Http\Controllers\ApiMonitorController::class, 'index'])->name('api-monitor.index');
+        Route::get('/api-monitor/{id}', [App\Http\Controllers\ApiMonitorController::class, 'show'])->name('api-monitor.show');
+        Route::get('/api-monitor-stats', [App\Http\Controllers\ApiMonitorController::class, 'statistics'])->name('api-monitor.statistics');
+        Route::get('/api-monitor-activity', [App\Http\Controllers\ApiMonitorController::class, 'activity'])->name('api-monitor.activity');
+        Route::post('/api-monitor/cleanup', [App\Http\Controllers\ApiMonitorController::class, 'cleanup'])->name('api-monitor.cleanup');
+    });
+
+    // Shared routes (for both admin and tenants)
+    Route::post('contacts/bulk-action', [ContactController::class, 'bulkAction'])->name('contacts.bulk-action');
     Route::resource('contacts', ContactController::class);
     Route::post('contacts/import', [ContactController::class, 'import'])->name('contacts.import');
 
@@ -161,7 +193,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('campaigns', CampaignController::class);
     Route::post('campaigns/{campaign}/send', [CampaignController::class, 'send'])->name('campaigns.send');
 
-    // Tags Management
+    // Tags Management (Shared - all authenticated users)
     Route::prefix('tags')->name('tags.')->group(function () {
         Route::get('/', [App\Http\Controllers\TagController::class, 'index'])->name('index');
         Route::post('/', [App\Http\Controllers\TagController::class, 'store'])->name('store');
@@ -172,7 +204,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/contact/{contact}/remove/{tag}', [App\Http\Controllers\TagController::class, 'removeFromContact'])->name('removeFromContact');
     });
 
-    // Notifications
+    // Notifications (Shared - all authenticated users)
     Route::prefix('notifications')->name('notifications.')->group(function () {
         Route::get('/settings', [App\Http\Controllers\NotificationController::class, 'settings'])->name('settings');
         Route::put('/settings', [App\Http\Controllers\NotificationController::class, 'updateSettings'])->name('update-settings');
@@ -183,17 +215,18 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{id}', [App\Http\Controllers\NotificationController::class, 'delete'])->name('delete');
     });
 
+    // Messages (Shared - all authenticated users)
     Route::resource('messages', MessageController::class)->only(['index', 'show']);
     Route::get('/messages-all', [MessageController::class, 'allMessages'])->name('messages.all');
 
-    // Inbox (Conversations/Chat)
+    // Inbox (Conversations/Chat) - Shared
     Route::get('/inbox', [InboxController::class, 'index'])->name('inbox.index');
     Route::get('/inbox/start/{contact}', [InboxController::class, 'startWithContact'])->name('inbox.start');
     Route::get('/inbox/{conversation}', [InboxController::class, 'show'])->name('inbox.show');
     Route::post('/inbox/{conversation}/reply', [InboxController::class, 'reply'])->name('inbox.reply');
     Route::post('/inbox/{conversation}/status', [InboxController::class, 'updateStatus'])->name('inbox.updateStatus');
 
-    // Analytics
+    // Analytics (Shared)
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
 
     // Profile
@@ -204,29 +237,33 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/profile/avatar', [ProfileController::class, 'deleteAvatar'])->name('profile.avatar.delete');
     Route::put('/profile/preferences', [ProfileController::class, 'updatePreferences'])->name('profile.preferences');
 
-    // Settings
-    Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
-    Route::post('/settings/client', [SettingsController::class, 'updateClient'])->name('settings.client.update');
-    Route::post('/settings/channel/{channel}', [SettingsController::class, 'updateChannel'])->name('settings.channel.update');
-    Route::post('/settings/regenerate-api-key', [SettingsController::class, 'regenerateApiKey'])->name('settings.regenerate-api-key');
-    
-    // Admin Settings (consolidated into main settings)
-    Route::post('/settings/admin', [SettingsController::class, 'updateAdminSettings'])->name('settings.admin.update');
-    Route::post('/settings/phone/add', [SettingsController::class, 'addPhoneNumber'])->name('settings.phone.add');
-    Route::get('/settings/phone/{id}/toggle', [SettingsController::class, 'togglePhoneNumber'])->name('settings.phone.toggle');
-    Route::delete('/settings/phone/{id}/delete', [SettingsController::class, 'deletePhoneNumber'])->name('settings.phone.delete');
-
-    // Wallet & Top-up Routes
-    Route::prefix('wallet')->name('wallet.')->group(function () {
-        Route::get('/', [App\Http\Controllers\WalletController::class, 'index'])->name('index');
-        Route::get('/topup', [App\Http\Controllers\WalletController::class, 'topup'])->name('topup');
-        Route::post('/topup', [App\Http\Controllers\WalletController::class, 'initiateTopup'])->name('topup.initiate');
-        Route::get('/status/{transactionRef}', [App\Http\Controllers\WalletController::class, 'status'])->name('status');
-        Route::get('/export', [App\Http\Controllers\WalletController::class, 'exportTransactions'])->name('export');
+    // ADMIN ONLY: Settings & Wallet Management
+    Route::middleware('admin')->group(function () {
+        // Settings
+        Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');
+        Route::post('/settings/client', [SettingsController::class, 'updateClient'])->name('settings.client.update');
+        Route::post('/settings/channel/create', [SettingsController::class, 'createChannel'])->name('settings.channel.create');
+        Route::post('/settings/channel/{channel}', [SettingsController::class, 'updateChannel'])->name('settings.channel.update');
+        Route::post('/settings/regenerate-api-key', [SettingsController::class, 'regenerateApiKey'])->name('settings.regenerate-api-key');
         
-        // Onfon Balance Management
-        Route::post('/onfon/sync', [App\Http\Controllers\WalletController::class, 'syncOnfonBalance'])->name('onfon.sync');
-        Route::get('/onfon/balance', [App\Http\Controllers\WalletController::class, 'getOnfonBalance'])->name('onfon.balance');
+        // Admin Settings (consolidated into main settings)
+        Route::post('/settings/admin', [SettingsController::class, 'updateAdminSettings'])->name('settings.admin.update');
+        Route::post('/settings/phone/add', [SettingsController::class, 'addPhoneNumber'])->name('settings.phone.add');
+        Route::get('/settings/phone/{id}/toggle', [SettingsController::class, 'togglePhoneNumber'])->name('settings.phone.toggle');
+        Route::delete('/settings/phone/{id}/delete', [SettingsController::class, 'deletePhoneNumber'])->name('settings.phone.delete');
+
+        // Wallet & Top-up Routes
+        Route::prefix('wallet')->name('wallet.')->group(function () {
+            Route::get('/', [App\Http\Controllers\WalletController::class, 'index'])->name('index');
+            Route::get('/topup', [App\Http\Controllers\WalletController::class, 'topup'])->name('topup');
+            Route::post('/topup', [App\Http\Controllers\WalletController::class, 'initiateTopup'])->name('topup.initiate');
+            Route::get('/status/{transactionRef}', [App\Http\Controllers\WalletController::class, 'status'])->name('status');
+            Route::get('/export', [App\Http\Controllers\WalletController::class, 'exportTransactions'])->name('export');
+            
+            // Onfon Balance Management
+            Route::post('/onfon/sync', [App\Http\Controllers\WalletController::class, 'syncOnfonBalance'])->name('onfon.sync');
+            Route::get('/onfon/balance', [App\Http\Controllers\WalletController::class, 'getOnfonBalance'])->name('onfon.balance');
+        });
     });
 
 // Public API endpoints (accessible without wallet prefix) for dashboard real-time updates
@@ -234,34 +271,73 @@ Route::prefix('api')->name('api.')->group(function () {
     Route::post('/onfon/balance/refresh', [App\Http\Controllers\WalletController::class, 'refreshSystemBalance'])->name('onfon.balance.refresh');
 });
 
-// Client switching for debugging (temporary)
-Route::get('/switch-client/{clientId}', function($clientId) {
-    session(['client_id' => $clientId]);
-    return redirect()->back()->with('success', 'Switched to client ' . $clientId);
-})->name('switch.client');
+    // ADMIN ONLY: Client switching & API Documentation
+    Route::middleware('admin')->group(function () {
+        // Client switching for debugging (temporary)
+        Route::get('/switch-client/{clientId}', function($clientId) {
+            session(['client_id' => $clientId]);
+            return redirect()->back()->with('success', 'Switched to client ' . $clientId);
+        })->name('switch.client');
 
-    // API Documentation & Developer Portal
-    Route::get('/api-docs', [App\Http\Controllers\ApiDocumentationController::class, 'index'])->name('api.docs');
+        // API Documentation & Developer Portal
+        Route::get('/api-docs', [App\Http\Controllers\ApiDocumentationController::class, 'index'])->name('api.docs');
 
-    // Notifications
-    Route::prefix('notifications')->name('notifications.')->group(function () {
-        Route::get('/', [App\Http\Controllers\NotificationController::class, 'index'])->name('index');
-        Route::get('/unread-count', [App\Http\Controllers\NotificationController::class, 'unreadCount'])->name('unread-count');
-        Route::post('/{id}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('mark-read');
-        Route::post('/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
-        Route::delete('/{id}', [App\Http\Controllers\NotificationController::class, 'destroy'])->name('destroy');
+        // Notifications
+        Route::prefix('notifications')->name('notifications.')->group(function () {
+            Route::get('/', [App\Http\Controllers\NotificationController::class, 'index'])->name('index');
+            Route::get('/unread-count', [App\Http\Controllers\NotificationController::class, 'unreadCount'])->name('unread-count');
+            Route::post('/{id}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('mark-read');
+            Route::post('/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+            Route::delete('/{id}', [App\Http\Controllers\NotificationController::class, 'delete'])->name('delete');
+        });
+
+        // Channel Routes (Admin only)
+        Route::prefix('whatsapp')->name('whatsapp.')->group(function () {
+            Route::get('/', [WhatsAppController::class, 'index'])->name('index');
+            Route::get('/configure', [WhatsAppController::class, 'configure'])->name('configure');
+            Route::post('/configure', [WhatsAppController::class, 'saveConfiguration'])->name('configure.save');
+            Route::post('/test-connection', [WhatsAppController::class, 'testConnection'])->name('test');
+            Route::post('/send', [WhatsAppController::class, 'sendMessage'])->name('send');
+            Route::post('/send-interactive', [WhatsAppController::class, 'sendInteractive'])->name('send.interactive');
+            Route::post('/upload-media', [WhatsAppController::class, 'uploadMedia'])->name('upload.media');
+            Route::post('/fetch-templates', [WhatsAppController::class, 'fetchTemplates'])->name('templates.fetch');
+        });
+
+        Route::prefix('sms')->name('sms.')->group(function () {
+            Route::get('/', [App\Http\Controllers\SmsController::class, 'index'])->name('index');
+            Route::post('/test-connection', [App\Http\Controllers\SmsController::class, 'testConnection'])->name('test');
+            Route::post('/send', [App\Http\Controllers\SmsController::class, 'sendMessage'])->name('send');
+        });
+
+        Route::prefix('email')->name('email.')->group(function () {
+            Route::get('/', [App\Http\Controllers\EmailController::class, 'index'])->name('index');
+            Route::post('/test-connection', [App\Http\Controllers\EmailController::class, 'testConnection'])->name('test');
+            Route::post('/send', [App\Http\Controllers\EmailController::class, 'sendMessage'])->name('send');
+        });
     });
 
-    // WhatsApp Routes
-    Route::prefix('whatsapp')->name('whatsapp.')->group(function () {
-        Route::get('/', [WhatsAppController::class, 'index'])->name('index');
-        Route::get('/configure', [WhatsAppController::class, 'configure'])->name('configure');
-        Route::post('/configure', [WhatsAppController::class, 'saveConfiguration'])->name('configure.save');
-        Route::post('/test-connection', [WhatsAppController::class, 'testConnection'])->name('test');
-        Route::post('/send', [WhatsAppController::class, 'sendMessage'])->name('send');
-        Route::post('/send-interactive', [WhatsAppController::class, 'sendInteractive'])->name('send.interactive');
-        Route::post('/upload-media', [WhatsAppController::class, 'uploadMedia'])->name('upload.media');
-        Route::post('/fetch-templates', [WhatsAppController::class, 'fetchTemplates'])->name('templates.fetch');
+    // Tenant Dashboard Routes (Authenticated tenants only). Apply tenant.active to gate features until activation
+    Route::prefix('tenant')->name('tenant.')->middleware(['tenant.active'])->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\TenantDashboardController::class, 'index'])->name('dashboard');
+               Route::get('/onboarding', [App\Http\Controllers\TenantDashboardController::class, 'onboarding'])->name('onboarding');
+        Route::get('/profile', [App\Http\Controllers\TenantDashboardController::class, 'profile'])->name('profile');
+        Route::put('/profile', [App\Http\Controllers\TenantDashboardController::class, 'updateProfile'])->name('profile.update');
+        Route::get('/billing', [App\Http\Controllers\TenantDashboardController::class, 'billing'])->name('billing');
+        Route::get('/payment', [App\Http\Controllers\PaymentController::class, 'index'])->name('payment');
+        
+        // Payment processing routes
+        Route::post('/payments/mpesa/initiate', [App\Http\Controllers\PaymentController::class, 'initiateMpesaPayment'])->name('payments.mpesa.initiate');
+        Route::post('/payments/stripe/create-intent', [App\Http\Controllers\PaymentController::class, 'createStripePaymentIntent'])->name('payments.stripe.create-intent');
+        Route::get('/payments/stripe/publishable-key', [App\Http\Controllers\PaymentController::class, 'getStripePublishableKey'])->name('payments.stripe.publishable-key');
+        Route::get('/payments/status/{transactionId}', [App\Http\Controllers\PaymentController::class, 'checkPaymentStatus'])->name('payments.status');
+        Route::get('/payments/transactions', [App\Http\Controllers\PaymentController::class, 'getTransactionHistory'])->name('payments.transactions');
+        Route::get('/api-docs', [App\Http\Controllers\TenantDashboardController::class, 'apiDocs'])->name('api-docs');
+        Route::get('/notifications', [App\Http\Controllers\TenantDashboardController::class, 'notifications'])->name('notifications');
+        Route::post('/notifications/{id}/read', [App\Http\Controllers\TenantDashboardController::class, 'markNotificationAsRead'])->name('notifications.read');
+        Route::post('/notifications/mark-all-read', [App\Http\Controllers\TenantDashboardController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
+        Route::delete('/notifications/{id}', [App\Http\Controllers\TenantDashboardController::class, 'deleteNotification'])->name('notifications.delete');
+        Route::delete('/notifications/clear-all', [App\Http\Controllers\TenantDashboardController::class, 'clearAllNotifications'])->name('notifications.clear-all');
+        Route::get('/notifications/unread-count', [App\Http\Controllers\TenantDashboardController::class, 'getUnreadCount'])->name('notifications.unread-count');
     });
 
     // Admin Sender/Tenant Management Routes (Admin only)
@@ -285,9 +361,18 @@ Route::get('/switch-client/{clientId}', function($clientId) {
         Route::get('/{id}/onfon-transactions', [AdminController::class, 'getOnfonTransactions'])->name('onfon-transactions');
     });
 
+    // Admin User Management Routes (Admin only)
+    Route::prefix('admin/admins')->name('admin.admins.')->middleware('admin')->group(function () {
+        Route::get('/', [AdminController::class, 'admins'])->name('index');
+        Route::get('/create', [AdminController::class, 'createAdmin'])->name('create');
+        Route::post('/', [AdminController::class, 'storeAdmin'])->name('store');
+        Route::get('/{id}/edit', [AdminController::class, 'editAdmin'])->name('edit');
+        Route::put('/{id}', [AdminController::class, 'updateAdmin'])->name('update');
+        Route::delete('/{id}', [AdminController::class, 'destroyAdmin'])->name('destroy');
+    });
 
-    // Senders Page (For all users)
-    Route::get('/senders', function() {
+    // ADMIN ONLY: Senders Page
+    Route::middleware('admin')->get('/senders', function() {
         return view('senders.index');
     })->name('senders.index');
 });

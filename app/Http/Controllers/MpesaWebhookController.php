@@ -123,6 +123,18 @@ class MpesaWebhookController extends Controller
                 $client->addBalance($transaction->amount, false);
                 $newBalance = $client->balance;
                 
+                // Auto-activate client after successful payment if they were inactive
+                if (!$client->status) {
+                    $client->update(['status' => true]);
+                    
+                    Log::info('Client auto-activated after M-Pesa payment', [
+                        'client_id' => $client->id,
+                        'transaction_id' => $transaction->id,
+                        'amount' => $transaction->amount,
+                        'mpesa_receipt' => $data['mpesa_receipt'],
+                    ]);
+                }
+                
                 Log::info('M-Pesa payment processed successfully', [
                     'transaction_id' => $transaction->id,
                     'client_id' => $client->id,

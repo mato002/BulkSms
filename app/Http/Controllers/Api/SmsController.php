@@ -110,7 +110,8 @@ class SmsController extends Controller
         $fromDate = $request->get('from_date');
         $toDate = $request->get('to_date');
 
-        $query = Sms::where('client_id', $client->id);
+        $query = Sms::where('client_id', $client->id)
+            ->with('client'); // Eager load client relationship
 
         if ($status) {
             $query->where('status', $status);

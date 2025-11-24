@@ -6,7 +6,10 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="mb-1">{{ $client->name }}</h1>
-            <p class="text-muted mb-0">Sender ID: <span class="fw-semibold">{{ $client->sender_id }}</span></p>
+            <p class="text-muted mb-0">
+                Client ID: <span class="fw-bold font-monospace text-primary">{{ $client->id }}</span> | 
+                Sender ID: <span class="fw-semibold">{{ $client->sender_id }}</span>
+            </p>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ route('admin.senders.edit', $client->id) }}" class="btn btn-warning">
@@ -37,8 +40,16 @@
                 <div class="card-body">
                     <table class="table table-sm table-borderless mb-0">
                         <tr>
-                            <td class="text-muted" width="100">Name:</td>
+                            <td class="text-muted" width="140">Client ID:</td>
+                            <td class="fw-bold font-monospace">{{ $client->id }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Name:</td>
                             <td class="fw-semibold">{{ $client->name }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Company:</td>
+                            <td>{{ $client->company_name ?? $client->sender_id }}</td>
                         </tr>
                         <tr>
                             <td class="text-muted">Sender ID:</td>
@@ -47,6 +58,10 @@
                         <tr>
                             <td class="text-muted">Contact:</td>
                             <td>{{ $client->contact }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Email:</td>
+                            <td>{{ $client->users->first()->email ?? 'N/A' }}</td>
                         </tr>
                         <tr>
                             <td class="text-muted">Status:</td>
@@ -63,8 +78,34 @@
                             </td>
                         </tr>
                         <tr>
+                            <td class="text-muted">Tier:</td>
+                            <td>
+                                <span class="badge bg-info">{{ $client->tier ?? 'Standard' }}</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Test Mode:</td>
+                            <td>
+                                @if($client->is_test_mode ?? false)
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>Enabled
+                                    </span>
+                                @else
+                                    <span class="badge bg-secondary">Disabled</span>
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Price/Unit:</td>
+                            <td class="fw-semibold">KES {{ number_format($client->price_per_unit ?? 1.00, 4) }}</td>
+                        </tr>
+                        <tr>
                             <td class="text-muted">Created:</td>
-                            <td>{{ $client->created_at->format('M d, Y') }}</td>
+                            <td>{{ $client->created_at->format('M d, Y H:i') }}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Updated:</td>
+                            <td>{{ $client->updated_at->format('M d, Y H:i') }}</td>
                         </tr>
                     </table>
                 </div>
@@ -72,47 +113,51 @@
         </div>
 
         <!-- Local Balance Card -->
-        <div class="col-lg-3">
-            <div class="card shadow-sm h-100 bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                <div class="card-body text-white">
-                    <div class="d-flex align-items-center mb-2">
-                        <i class="bi bi-database me-2"></i>
-                        <h6 class="opacity-75 mb-0">Local Balance</h6>
+        <div class="col-lg-3" id="balance-management">
+            <div class="card shadow-sm h-100 border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-wallet2 me-2"></i>Bulk SMS Balance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="mb-2">
+                            <span class="text-muted small d-block">Available Balance</span>
+                            <h2 class="display-6 fw-bold text-primary mb-1">KES {{ number_format($client->balance, 2) }}</h2>
+                            <span class="text-muted small">{{ number_format($client->getBalanceInUnits(), 2) }} units</span>
+                        </div>
                     </div>
-                    <h2 class="display-5 fw-bold mb-2">KES {{ number_format($client->balance, 2) }}</h2>
-                    <small class="opacity-75">{{ number_format($client->getBalanceInUnits(), 2) }} units</small>
-                    <form action="{{ route('admin.senders.update-balance', $client->id) }}" method="POST" class="mt-3">
+                    <hr>
+                    <form action="{{ route('admin.senders.update-balance', $client->id) }}" method="POST">
                         @csrf
                         @method('POST')
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <input type="number" 
-                                       name="amount" 
-                                       step="0.01" 
-                                       min="0" 
-                                       placeholder="Amount" 
-                                       required
-                                       class="form-control form-control-sm">
-                            </div>
-                            <div class="col-6">
-                                <select name="action" class="form-select form-select-sm">
-                                    <option value="add">Add</option>
-                                    <option value="deduct">Deduct</option>
-                                    <option value="set">Set</option>
-                                </select>
-                            </div>
-                            <div class="col-6">
-                                <select name="type" class="form-select form-select-sm">
-                                    <option value="ksh">KSH</option>
-                                    <option value="units">Units</option>
-                                </select>
-                            </div>
-                            <div class="col-6">
-                                <button type="submit" class="btn btn-light btn-sm w-100">
-                                    <i class="bi bi-cash-stack me-1"></i>Update
-                                </button>
-                            </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-muted mb-1">Amount</label>
+                            <input type="number" 
+                                   name="amount" 
+                                   step="0.01" 
+                                   min="0" 
+                                   placeholder="Enter amount" 
+                                   required
+                                   class="form-control form-control-sm">
                         </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-muted mb-1">Action</label>
+                            <select name="action" class="form-select form-select-sm">
+                                <option value="add">Add</option>
+                                <option value="deduct">Deduct</option>
+                                <option value="set">Set</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small text-muted mb-1">Type</label>
+                            <select name="type" class="form-select form-select-sm">
+                                <option value="ksh">KSH</option>
+                                <option value="units">Units</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-cash-stack me-1"></i>Update Balance
+                        </button>
                     </form>
                 </div>
             </div>
@@ -123,42 +168,48 @@
             @php
                 $hasOnfonCreds = !empty($client->settings['onfon_credentials'] ?? []);
             @endphp
-            <div class="card shadow-sm h-100 {{ $hasOnfonCreds ? 'bg-gradient' : 'bg-light' }}" 
-                 style="{{ $hasOnfonCreds ? 'background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);' : '' }}">
-                <div class="card-body {{ $hasOnfonCreds ? 'text-white' : '' }}">
-                    <div class="d-flex align-items-center mb-2">
-                        <i class="bi bi-cloud me-2"></i>
-                        <h6 class="{{ $hasOnfonCreds ? 'opacity-75' : 'text-muted' }} mb-0">Onfon Balance</h6>
-                    </div>
+            <div class="card shadow-sm h-100 border-success">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-cloud me-2"></i>Onfon Balance</h5>
+                </div>
+                <div class="card-body">
                     @if($hasOnfonCreds)
-                        <h2 class="display-5 fw-bold mb-2" id="onfon-balance-value">
-                            @if($client->onfon_balance !== null)
-                                KES {{ number_format($client->onfon_balance, 2) }}
-                            @else
-                                <span class="opacity-50">Not synced</span>
-                            @endif
-                        </h2>
-                        @if($client->onfon_last_sync)
-                            <small class="opacity-75">{{ $client->onfon_last_sync->diffForHumans() }}</small>
-                        @else
-                            <small class="opacity-75">Never synced</small>
-                        @endif
+                        <div class="text-center mb-3">
+                            <div class="mb-2">
+                                <span class="text-muted small d-block">Onfon Account Balance</span>
+                                <h2 class="display-6 fw-bold text-success mb-1" id="onfon-balance-value">
+                                    @if($client->onfon_balance !== null)
+                                        KES {{ number_format($client->onfon_balance, 2) }}
+                                    @else
+                                        <span class="text-muted">Not synced</span>
+                                    @endif
+                                </h2>
+                                @if($client->onfon_last_sync)
+                                    <small class="text-muted">{{ $client->onfon_last_sync->diffForHumans() }}</small>
+                                @else
+                                    <small class="text-muted">Never synced</small>
+                                @endif
+                            </div>
+                        </div>
+                        <hr>
                         <form action="{{ route('admin.senders.sync-onfon-balance', $client->id) }}" 
                               method="POST" 
-                              class="mt-3" 
                               id="sync-balance-form">
                             @csrf
-                            <button type="submit" class="btn btn-light btn-sm w-100">
+                            <button type="submit" class="btn btn-success btn-sm w-100">
                                 <i class="bi bi-arrow-repeat me-1"></i>Sync from Onfon
                             </button>
                         </form>
                     @else
-                        <p class="text-muted mb-3">
-                            <i class="bi bi-info-circle me-1"></i>No Onfon credentials configured
-                        </p>
-                        <a href="{{ route('admin.senders.edit', $client->id) }}" class="btn btn-primary btn-sm w-100">
-                            <i class="bi bi-gear me-1"></i>Configure Onfon
-                        </a>
+                        <div class="text-center py-3">
+                            <i class="bi bi-cloud-slash text-muted" style="font-size: 2rem;"></i>
+                            <p class="text-muted mt-2 mb-3">
+                                No Onfon credentials configured
+                            </p>
+                            <a href="{{ route('admin.senders.edit', $client->id) }}" class="btn btn-success btn-sm">
+                                <i class="bi bi-gear me-1"></i>Configure Onfon
+                            </a>
+                        </div>
                     @endif
                 </div>
             </div>
@@ -189,13 +240,132 @@
                         </button>
                         <form action="{{ route('admin.senders.regenerate-api-key', $client->id) }}" 
                               method="POST" 
-                              onsubmit="return confirm('Are you sure? This will invalidate the current API key.');">
+                              >
                             @csrf
                             @method('POST')
-                            <button type="submit" class="btn btn-sm btn-warning w-100">
+                            <button type="submit" class="btn btn-sm btn-warning w-100" onclick="confirmAction(event, 'Regenerate API Key?', 'This will invalidate the current API key and break existing integrations!', 'Yes, regenerate it!')">
                                 <i class="bi bi-arrow-clockwise me-1"></i>Regenerate Key
                             </button>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Configuration Card -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="bi bi-gear me-2"></i>System Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3"><i class="bi bi-cloud me-2"></i>Onfon Integration</h6>
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr>
+                                    <td class="text-muted" width="180">Onfon Credentials:</td>
+                                    <td>
+                                        @php
+                                            $hasOnfonCreds = !empty($client->settings['onfon_credentials'] ?? []);
+                                        @endphp
+                                        @if($hasOnfonCreds)
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle me-1"></i>Configured
+                                            </span>
+                                        @else
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-x-circle me-1"></i>Not Configured
+                                            </span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Auto Sync Balance:</td>
+                                    <td>
+                                        @if($client->auto_sync_balance ?? false)
+                                            <span class="badge bg-success">Enabled</span>
+                                        @else
+                                            <span class="badge bg-secondary">Disabled</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                @if($hasOnfonCreds)
+                                    <tr>
+                                        <td class="text-muted">Onfon Balance:</td>
+                                        <td class="fw-semibold">
+                                            @if($client->onfon_balance !== null)
+                                                KES {{ number_format($client->onfon_balance, 2) }}
+                                            @else
+                                                <span class="text-muted">Not synced</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted">Last Sync:</td>
+                                        <td>
+                                            @if($client->onfon_last_sync)
+                                                {{ $client->onfon_last_sync->format('M d, Y H:i') }}
+                                                <small class="text-muted">({{ $client->onfon_last_sync->diffForHumans() }})</small>
+                                            @else
+                                                <span class="text-muted">Never</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endif
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3"><i class="bi bi-webhook me-2"></i>Webhook Configuration</h6>
+                            <table class="table table-sm table-borderless mb-0">
+                                <tr>
+                                    <td class="text-muted" width="180">Webhook Status:</td>
+                                    <td>
+                                        @if($client->webhook_active ?? false)
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle me-1"></i>Active
+                                            </span>
+                                        @else
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Webhook URL:</td>
+                                    <td>
+                                        @if($client->webhook_url)
+                                            <code class="small">{{ Str::limit($client->webhook_url, 50) }}</code>
+                                        @else
+                                            <span class="text-muted">Not set</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Webhook Secret:</td>
+                                    <td>
+                                        @if($client->webhook_secret)
+                                            <code class="small font-monospace">{{ Str::limit($client->webhook_secret, 20) }}...</code>
+                                        @else
+                                            <span class="text-muted">Not set</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted">Webhook Events:</td>
+                                    <td>
+                                        @if($client->webhook_events && count($client->webhook_events) > 0)
+                                            @foreach($client->webhook_events as $event)
+                                                <span class="badge bg-info me-1">{{ $event }}</span>
+                                            @endforeach
+                                        @else
+                                            <span class="text-muted">No events configured</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

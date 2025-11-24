@@ -34,6 +34,60 @@
         </div>
     @endif
 
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i>{{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    <form id="bulkActionForm" action="{{ route('contacts.bulk-action') }}" method="POST">
+        @csrf
+        <input type="hidden" name="bulk_action" id="bulkActionInput">
+        <input type="hidden" name="tag_id" id="bulkTagInput">
+    </form>
+
+    <div id="bulkActionToolbar" class="bulk-action-toolbar shadow-sm" style="display: none;">
+        <div class="toolbar-main">
+            <div class="toolbar-count">
+                <span id="selectedCount">0</span> selected
+            </div>
+            <div class="toolbar-actions">
+                <div class="toolbar-group">
+                    <label for="bulkTagSelect" class="visually-hidden">Select tag</label>
+                    <select id="bulkTagSelect" class="form-select form-select-sm" {{ $availableTags->isEmpty() ? 'disabled' : '' }}>
+                        <option value="">Apply tag...</option>
+                        @foreach($availableTags as $tag)
+                            <option value="{{ $tag->id }}">{{ $tag->name }}</option>
+                        @endforeach
+                    </select>
+                    @if($availableTags->isEmpty())
+                        <a href="{{ route('tags.index') }}" class="small text-decoration-none ms-2">
+                            Create tags
+                        </a>
+                    @endif
+                    <button type="button" class="btn btn-sm btn-primary ms-2" id="applyTagBtn" disabled>
+                        <i class="bi bi-tags me-1"></i>Apply Tag
+                    </button>
+                </div>
+                <div class="toolbar-group">
+                    <button type="button" class="btn btn-sm btn-danger" id="bulkDeleteBtn">
+                        <i class="bi bi-trash me-1"></i>Delete
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="clearSelectionBtn">
+                        Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="bulkActionOverlay" class="bulk-action-overlay" style="display: none;">
+        <div class="spinner-border text-light" role="status">
+            <span class="visually-hidden">Processing...</span>
+        </div>
+    </div>
+
     <!-- Stats Cards -->
     <div class="stats-grid mb-4">
         <div class="stat-card-modern">
@@ -115,7 +169,11 @@
                 <table class="modern-table">
                     <thead>
                         <tr>
-                            <th style="width:56px"></th>
+                            <th style="width: 56px;">
+                                <div class="form-check">
+                                    <input class="form-check-input contact-select-all" type="checkbox" id="selectAllContacts">
+                                </div>
+                            </th>
                             <th>Name</th>
                             <th>Contact Info</th>
                             <th>Department</th>
@@ -127,12 +185,17 @@
                         @forelse($contacts as $contact)
                         <tr>
                             <td>
-                                <div class="contact-avatar">
-                                    {{ strtoupper(substr($contact->name, 0, 1)) }}
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input contact-checkbox" type="checkbox" data-contact-id="{{ $contact->id }}">
+                                    </div>
+                                    <div class="contact-avatar">
+                                        {{ strtoupper(substr($contact->name, 0, 1)) }}
+                                    </div>
                                 </div>
                             </td>
                             <td>
-                                <a href="{{ route('inbox.start', $contact->id) }}" class="contact-name">
+                                <a href="{{ route('contacts.show', $contact->id) }}" class="contact-name">
                                     {{ $contact->name }}
                                 </a>
                             </td>
@@ -152,16 +215,19 @@
                             <td class="text-muted">{{ \Carbon\Carbon::parse($contact->last_message_at ?? $contact->created_at)->diffForHumans() }}</td>
                             <td class="text-end">
                                 <div class="action-buttons">
+                                    <a href="{{ route('contacts.show', $contact->id) }}" class="btn-action btn-action-info" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
                                     <a href="{{ route('inbox.start', $contact->id) }}" class="btn-action btn-action-success" title="Send Message">
                                         <i class="bi bi-chat-dots"></i>
                                     </a>
                                     <a href="{{ route('contacts.edit', $contact->id) }}" class="btn-action btn-action-primary" title="Edit Contact">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <form action="{{ route('contacts.destroy', $contact->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this contact?')">
+                                    <form action="{{ route('contacts.destroy', $contact->id) }}" method="POST" class="d-inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn-action btn-action-danger" title="Delete Contact">
+                                        <button type="submit" class="btn-action btn-action-danger" title="Delete Contact" onclick="confirmDelete(event, 'Are you sure you want to delete this contact? This action cannot be undone.')">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
@@ -195,7 +261,7 @@
         </div>
         @if($contacts->hasPages())
         <div class="modern-card-footer">
-            {{ $contacts->links('vendor.pagination.simple') }}
+            {{ $contacts->appends(request()->query())->links('vendor.pagination.simple') }}
         </div>
         @endif
     </div>
@@ -236,6 +302,79 @@
 .modern-page-container {
     padding: 1.5rem;
     max-width: 100%;
+}
+
+.bulk-action-toolbar {
+    position: fixed;
+    left: 50%;
+    bottom: 1.5rem;
+    transform: translateX(-50%);
+    background: #0f172a;
+    color: #f8fafc;
+    border-radius: 999px;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    z-index: 1040;
+    min-width: 280px;
+    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.35);
+}
+
+.bulk-action-toolbar .toolbar-main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.bulk-action-toolbar .toolbar-count {
+    font-weight: 600;
+}
+
+.bulk-action-toolbar .toolbar-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.bulk-action-toolbar .toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.bulk-action-toolbar select.form-select-sm {
+    min-width: 160px;
+    border-radius: 999px;
+    border: none;
+    padding-left: 1rem;
+    padding-right: 2rem;
+}
+
+.bulk-action-toolbar .btn {
+    border-radius: 999px;
+    padding: 0.35rem 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.bulk-action-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+}
+
+.modern-table tr.selected-row {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+.modern-table tr.selected-row:hover {
+    background: rgba(59, 130, 246, 0.12);
 }
 
 /* Page Header */
@@ -653,6 +792,39 @@
         padding: 1rem;
     }
     
+    .bulk-action-toolbar {
+        bottom: 1rem;
+        width: calc(100% - 2rem);
+        border-radius: 1rem;
+        padding: 1rem;
+        transform: translateX(-50%);
+    }
+
+    .bulk-action-toolbar .toolbar-main {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .bulk-action-toolbar .toolbar-actions {
+        width: 100%;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .bulk-action-toolbar .toolbar-group {
+        width: 100%;
+    }
+
+    .bulk-action-toolbar select.form-select-sm {
+        width: 100%;
+    }
+
+    .bulk-action-toolbar .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
     .page-header-content {
         flex-direction: column;
         align-items: flex-start;
@@ -672,4 +844,186 @@
     }
 }
 </style>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const selectAll = document.getElementById('selectAllContacts');
+    const checkboxNodes = document.querySelectorAll('.contact-checkbox');
+    const toolbar = document.getElementById('bulkActionToolbar');
+    const overlay = document.getElementById('bulkActionOverlay');
+    const bulkForm = document.getElementById('bulkActionForm');
+    const bulkActionInput = document.getElementById('bulkActionInput');
+    const bulkTagInput = document.getElementById('bulkTagInput');
+    const tagSelect = document.getElementById('bulkTagSelect');
+    const applyTagBtn = document.getElementById('applyTagBtn');
+    const deleteBtn = document.getElementById('bulkDeleteBtn');
+    const clearBtn = document.getElementById('clearSelectionBtn');
+    const selectedCountEl = document.getElementById('selectedCount');
+
+    if (!bulkForm) {
+        return;
+    }
+
+    const selectedIds = new Set();
+
+    function updateToolbarVisibility() {
+        if (!toolbar) {
+            return;
+        }
+
+        const selectedCount = selectedIds.size;
+        selectedCountEl.textContent = selectedCount;
+
+        if (selectedCount > 0) {
+            toolbar.style.display = 'block';
+            document.body.classList.add('bulk-toolbar-visible');
+        } else {
+            toolbar.style.display = 'none';
+            document.body.classList.remove('bulk-toolbar-visible');
+        }
+
+        checkboxNodes.forEach(checkbox => {
+            const row = checkbox.closest('tr');
+            if (row) {
+                row.classList.toggle('selected-row', selectedIds.has(checkbox.dataset.contactId));
+            }
+        });
+
+        if (selectAll) {
+            if (selectedCount === 0) {
+                selectAll.checked = false;
+                selectAll.indeterminate = false;
+            } else if (selectedCount === checkboxNodes.length) {
+                selectAll.checked = true;
+                selectAll.indeterminate = false;
+            } else {
+                selectAll.indeterminate = true;
+                selectAll.checked = false;
+            }
+        }
+
+        if (applyTagBtn && tagSelect) {
+            applyTagBtn.disabled = !tagSelect.value || selectedCount === 0;
+        }
+    }
+
+    function toggleSelection(checkbox) {
+        const contactId = checkbox.dataset.contactId;
+        if (!contactId) {
+            return;
+        }
+
+        if (checkbox.checked) {
+            selectedIds.add(contactId);
+        } else {
+            selectedIds.delete(contactId);
+        }
+
+        updateToolbarVisibility();
+    }
+
+    checkboxNodes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => toggleSelection(checkbox));
+    });
+
+    selectAll?.addEventListener('change', function () {
+        const shouldSelect = this.checked;
+        checkboxNodes.forEach(cb => {
+            cb.checked = shouldSelect;
+            const contactId = cb.dataset.contactId;
+            if (!contactId) {
+                return;
+            }
+            if (shouldSelect) {
+                selectedIds.add(contactId);
+            } else {
+                selectedIds.delete(contactId);
+            }
+        });
+        updateToolbarVisibility();
+    });
+
+    tagSelect?.addEventListener('change', () => {
+        if (applyTagBtn) {
+            applyTagBtn.disabled = !tagSelect.value || selectedIds.size === 0;
+        }
+    });
+
+    clearBtn?.addEventListener('click', function () {
+        checkboxNodes.forEach(cb => {
+            cb.checked = false;
+        });
+        selectedIds.clear();
+        updateToolbarVisibility();
+    });
+
+    function submitBulkAction(action) {
+        if (selectedIds.size === 0) {
+            window.alert('Select at least one contact to continue.');
+            return;
+        }
+
+        if (action === 'tag') {
+            if (!tagSelect || !tagSelect.value) {
+                window.alert('Choose a tag before applying it to contacts.');
+                return;
+            }
+            bulkTagInput.value = tagSelect.value;
+        }
+
+        if (action === 'delete') {
+            event.preventDefault();
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'Are you sure you want to delete the selected contacts? This action cannot be undone.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete them!',
+                cancelButtonText: 'Cancel',
+                reverseButtons: true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('bulk-action-form').submit();
+                }
+            });
+            return false;
+        }
+        if (false) {
+            return;
+        }
+
+        bulkActionInput.value = action;
+
+        // Remove previous dynamic inputs
+        bulkForm.querySelectorAll('input[name="selected_contacts[]"]').forEach(el => el.remove());
+
+        selectedIds.forEach(id => {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'selected_contacts[]';
+            hiddenInput.value = id;
+            bulkForm.appendChild(hiddenInput);
+        });
+
+        if (overlay) {
+            overlay.style.display = 'flex';
+        }
+
+        bulkForm.submit();
+    }
+
+    applyTagBtn?.addEventListener('click', function () {
+        submitBulkAction('tag');
+    });
+
+    deleteBtn?.addEventListener('click', function () {
+        submitBulkAction('delete');
+    });
+});
+</script>
+@endpush
+
 @endsection

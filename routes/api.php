@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\CampaignController;
 use App\Http\Controllers\Api\ClientController;
+use App\Http\Controllers\Monitoring\HealthCheckController;
 use App\Http\Controllers\WebhookController;
 
 /*
@@ -21,13 +22,7 @@ use App\Http\Controllers\WebhookController;
 */
 
 // Public routes
-Route::get('/health', function () {
-    return response()->json([
-        'status' => 'success',
-        'message' => 'Bulk SMS API is running',
-        'timestamp' => now()
-    ]);
-});
+Route::get('/health', HealthCheckController::class);
 
 // API routes with authentication
 Route::middleware(['api.auth'])->group(function () {
@@ -103,9 +98,23 @@ Route::post('/webhooks/onfon/dlr', [WebhookController::class, 'onfonDlr']); // D
 Route::post('/webhooks/whatsapp', [WebhookController::class, 'whatsappWebhook']);
 Route::post('/webhooks/email', [WebhookController::class, 'emailWebhook']);
 
-// M-Pesa Webhooks
-Route::post('/webhooks/mpesa/callback', [\App\Http\Controllers\MpesaWebhookController::class, 'callback']);
-Route::post('/webhooks/mpesa/timeout', [\App\Http\Controllers\MpesaWebhookController::class, 'timeout']);
+// Payment API routes (authenticated users)
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::prefix('payments')->group(function () {
+        // M-Pesa payment routes
+        Route::post('/mpesa/initiate', [\App\Http\Controllers\PaymentController::class, 'initiateMpesaPayment']);
+        Route::get('/status/{transactionId}', [\App\Http\Controllers\PaymentController::class, 'checkPaymentStatus']);
+        Route::get('/transactions', [\App\Http\Controllers\PaymentController::class, 'getTransactionHistory']);
+        
+        // Stripe payment routes
+        Route::post('/stripe/create-intent', [\App\Http\Controllers\PaymentController::class, 'createStripePaymentIntent']);
+        Route::get('/stripe/publishable-key', [\App\Http\Controllers\PaymentController::class, 'getStripePublishableKey']);
+    });
+});
+
+// Payment webhooks (no auth - providers will call these)
+Route::post('/webhooks/mpesa/callback', [\App\Http\Controllers\PaymentController::class, 'handleMpesaCallback']);
+Route::post('/webhooks/stripe/webhook', [\App\Http\Controllers\PaymentController::class, 'handleStripeWebhook']);
 
 // Local test route (no auth) to validate send flow quickly
 if (app()->environment('local')) {

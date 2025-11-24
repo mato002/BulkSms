@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use App\Services\Cache\RateLimitCache;
 use Symfony\Component\HttpFoundation\Response;
 
 class TierBasedRateLimit
@@ -30,9 +31,12 @@ class TierBasedRateLimit
         // Create unique key for this client
         $key = 'api_rate_limit:' . $client->id;
 
+        // Use cached rate limit counter
+        $current = RateLimitCache::increment($key, 60);
+        
         // Check rate limit
-        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
-            $seconds = RateLimiter::availableIn($key);
+        if (RateLimitCache::isExceeded($key, $maxAttempts)) {
+            $seconds = RateLimitCache::timeUntilReset($key, 60);
             
             return response()->json([
                 'status' => 'error',
@@ -44,14 +48,12 @@ class TierBasedRateLimit
             ], 429)->header('Retry-After', $seconds);
         }
 
-        // Hit the rate limiter
-        RateLimiter::hit($key, 60); // 60 seconds = 1 minute
-
         // Add rate limit headers to response
         $response = $next($request);
         
+        $remaining = RateLimitCache::remaining($key, $maxAttempts);
         $response->headers->set('X-RateLimit-Limit', $maxAttempts);
-        $response->headers->set('X-RateLimit-Remaining', $maxAttempts - RateLimiter::attempts($key));
+        $response->headers->set('X-RateLimit-Remaining', $remaining);
         $response->headers->set('X-RateLimit-Reset', now()->addMinute()->timestamp);
 
         return $response;

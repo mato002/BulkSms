@@ -230,6 +230,29 @@ class CampaignController extends Controller
             'failed_count' => $failed,
         ]);
 
+        // Create notification for campaign completion
+        try {
+            \App\Models\Notification::campaignCompleted(
+                $clientId,
+                $campaign->id,
+                $campaign->name,
+                $sent + $failed,
+                $sent,
+                $failed
+            );
+        } catch (\Exception $e) {
+            \Log::warning('Failed to create campaign completion notification', ['error' => $e->getMessage()]);
+        }
+
+        // Create notification if there were failures
+        if ($failed > 0) {
+            try {
+                \App\Models\Notification::messagesFailed($clientId, $failed, 'Some messages failed during campaign send');
+            } catch (\Exception $e) {
+                \Log::warning('Failed to create message failure notification', ['error' => $e->getMessage()]);
+            }
+        }
+
         return redirect()->route('campaigns.show', $id)->with('success', "Campaign sent! {$sent} succeeded, {$failed} failed.");
     }
 
@@ -273,6 +296,29 @@ class CampaignController extends Controller
             'sent_count' => $sent,
             'failed_count' => $failed,
         ]);
+
+        // Create notification for campaign completion
+        try {
+            \App\Models\Notification::campaignCompleted(
+                $campaign->client_id,
+                $campaign->id,
+                $campaign->name,
+                $sent + $failed,
+                $sent,
+                $failed
+            );
+        } catch (\Exception $e) {
+            \Log::warning('Failed to create campaign completion notification', ['error' => $e->getMessage()]);
+        }
+
+        // Create notification if there were failures
+        if ($failed > 0) {
+            try {
+                \App\Models\Notification::messagesFailed($campaign->client_id, $failed, 'Some messages failed during scheduled campaign send');
+            } catch (\Exception $e) {
+                \Log::warning('Failed to create message failure notification', ['error' => $e->getMessage()]);
+            }
+        }
 
         \Log::info('Scheduled campaign sent', [
             'campaign_id' => $campaign->id,

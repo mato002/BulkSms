@@ -82,21 +82,50 @@
             color: #667eea;
         }
         
-        .btn {
+        .btn-outline {
+            background: transparent;
+            color: #667eea;
+            border: 2px solid #667eea;
             padding: 0.75rem 1.5rem;
-            border-radius: 8px;
+            border-radius: 50px;
             text-decoration: none;
             font-weight: 600;
             transition: all 0.3s ease;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-outline:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
             cursor: pointer;
-            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            border: 2px solid transparent;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn:hover,
+        .btn:focus {
+            text-decoration: none;
+            outline: none;
         }
         
         .btn-primary {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            border-color: transparent;
         }
         
         .btn-primary:hover {
@@ -109,14 +138,16 @@
         }
         
         .btn-secondary {
-            background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
+            background: rgba(255,255,255,0.15);
+            color: #ffffff;
+            border: 2px solid rgba(255,255,255,0.6);
+            backdrop-filter: blur(8px);
         }
         
         .btn-secondary:hover {
-            background: #667eea;
-            color: white;
+            background: white;
+            color: #667eea;
+            border-color: white;
         }
         
         /* Hero Section */
@@ -365,7 +396,95 @@
             line-height: 1.8;
         }
         
-        /* How It Works */
+        /* Why Choose Us Section */
+        .why-choose-us {
+            padding: 80px 0;
+            background: #f8f9fa;
+        }
+        
+        .why-choose-us .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+        
+        .why-choose-us .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .why-choose-us .section-header p {
+            font-size: 1.2rem;
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .benefit-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+        
+        .benefit-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .benefit-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+            color: white;
+        }
+        
+        .benefit-card h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .benefit-card p {
+            color: #666;
+            line-height: 1.6;
+            margin: 0;
+        }
+        
+        /* Hero Note */
+        .hero-note {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+        
+        .hero-note p {
+            color: #10b981;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        .hero-note i {
+            margin-right: 0.5rem;
+        }
         .how-it-works {
             padding: 100px 0.5rem;
             background: 
@@ -873,6 +992,21 @@
         .cta-section .btn-secondary:hover {
             background: white;
             color: #667eea;
+        }
+        
+        .cta-note {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+        
+        .cta-note p {
+            color: #10b981;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        .cta-note i {
+            margin-right: 0.5rem;
         }
 
         /* Support Chat Widget */
@@ -1393,8 +1527,10 @@
             
             .features-grid,
             .steps,
-            .channels-grid {
-                grid-template-columns: 1fr;
+            .channels-grid,
+            .benefits-grid,
+            .testimonials-grid {
+                grid-template-columns: repeat(2, 1fr);
             }
             
             .contact-wrapper {
@@ -1421,7 +1557,11 @@
                 padding: 60px 0.5rem;
             }
             
-            .testimonials-grid {
+            .testimonials-grid,
+            .features-grid,
+            .steps,
+            .channels-grid,
+            .benefits-grid {
                 grid-template-columns: 1fr;
             }
             
@@ -1463,8 +1603,14 @@
                 <a href="#features">Features</a>
                 <a href="#how-it-works">How It Works</a>
                 <a href="#channels">Channels</a>
+                <a href="#pricing">Pricing</a>
                 <a href="#contact">Contact Us</a>
-                <a href="{{ route('login') }}" class="btn btn-primary">Admin Login</a>
+                <a href="{{ route('tenant.register') }}" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Sign Up
+                </a>
+                <a href="{{ route('login') }}" class="btn btn-outline">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </a>
             </div>
         </div>
     </nav>
@@ -1475,8 +1621,15 @@
             <h1>Multi-Channel Messaging Platform</h1>
             <p>Send SMS, WhatsApp, and Email at scale. Manage contacts, create campaigns, and track delivery with our powerful CRM platform.</p>
             <div class="hero-buttons">
-                <a href="#contact" class="btn btn-primary">Get in Touch</a>
-                <a href="#features" class="btn btn-secondary">Learn More</a>
+                <a href="{{ route('tenant.register') }}" class="btn btn-primary" role="button">
+                    <i class="fas fa-rocket"></i> Start Free Trial
+                </a>
+                <a href="#how-it-works" class="btn btn-secondary" role="button">
+                    <i class="fas fa-play"></i> See How It Works
+                </a>
+            </div>
+            <div class="hero-note">
+                <p><i class="fas fa-check-circle"></i> No credit card required • Setup in 2 minutes • Free trial available</p>
             </div>
             <div class="hero-stats">
                 <div class="stat">
@@ -1553,34 +1706,93 @@
         </div>
     </section>
     
+    <!-- Pricing Section -->
+    <section id="pricing" style="padding: 100px 0.5rem; background: #ffffff;">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-tag">Our Packages</div>
+                <h2 class="section-title">Flexible, Pay‑as‑You‑Go Pricing</h2>
+                <p class="section-description">Top‑ups never expire. Contact us for high‑volume discounts.</p>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; box-shadow:0 4px 20px rgba(0,0,0,0.06);">
+                    <thead>
+                        <tr style="background:#56c0ef; color:#0a2540; text-align:left;">
+                            <th style="padding:14px; font-weight:700;">Top‑up Amount</th>
+                            <th style="padding:14px; font-weight:700;">Price per SMS</th>
+                            <th style="padding:14px; font-weight:700;">Min Messages</th>
+                            <th style="padding:14px; font-weight:700;">Max Messages</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="background:#f8fbff; border-bottom:1px solid #eef2f7;">
+                            <td style="padding:14px;">KES 1 - KES 9,000</td>
+                            <td style="padding:14px;">KES 0.75</td>
+                            <td style="padding:14px;">1</td>
+                            <td style="padding:14px;">12,000</td>
+                        </tr>
+                        <tr style="background:#ffffff; border-bottom:1px solid #eef2f7;">
+                            <td style="padding:14px;">KES 9,001 – KES 18,000</td>
+                            <td style="padding:14px;">KES 0.70</td>
+                            <td style="padding:14px;">12,859</td>
+                            <td style="padding:14px;">25,714</td>
+                        </tr>
+                        <tr style="background:#f8fbff; border-bottom:1px solid #eef2f7;">
+                            <td style="padding:14px;">KES 18,001 – KES 37,000</td>
+                            <td style="padding:14px;">KES 0.65</td>
+                            <td style="padding:14px;">27,694</td>
+                            <td style="padding:14px;">56,923</td>
+                        </tr>
+                        <tr style="background:#ffffff; border-bottom:1px solid #eef2f7;">
+                            <td style="padding:14px;">KES 37,001 – KES 75,000</td>
+                            <td style="padding:14px;">KES 0.60</td>
+                            <td style="padding:14px;">61,668</td>
+                            <td style="padding:14px;">125,000</td>
+                        </tr>
+                        <tr style="background:#f8fbff;">
+                            <td style="padding:14px;">KES 75,001 – KES 150,000</td>
+                            <td style="padding:14px;">KES 0.55</td>
+                            <td style="padding:14px;">136,365</td>
+                            <td style="padding:14px;">272,727</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="text-align:center; margin-top:2rem;">
+                <a href="{{ route('tenant.register') }}" class="btn btn-primary btn-large"><i class="fas fa-user-plus"></i> Create Free Account</a>
+            </div>
+        </div>
+    </section>
+
+
     <!-- How It Works -->
     <section class="how-it-works" id="how-it-works">
         <div class="container">
             <div class="section-header">
                 <div class="section-tag">Simple Process</div>
                 <h2 class="section-title">How It Works</h2>
-                <p class="section-description">Get started in minutes with our simple 4-step process</p>
+                <p class="section-description">From campaign creation to delivery tracking - see how our platform works</p>
             </div>
             <div class="steps">
                 <div class="step">
                     <div class="step-number">1</div>
-                    <h3>Sign Up</h3>
-                    <p>Create your account and get instant access to the platform</p>
+                    <h3>Manage Contacts</h3>
+                    <p>Organize your customer database with tags, departments, and custom fields. Import from CSV or add manually.</p>
                 </div>
                 <div class="step">
                     <div class="step-number">2</div>
-                    <h3>Import Contacts</h3>
-                    <p>Upload your contacts via CSV or add them manually to your database</p>
+                    <h3>Create Campaigns</h3>
+                    <p>Design your message using templates, personalization, and multi-channel options. Schedule for optimal delivery times.</p>
                 </div>
                 <div class="step">
                     <div class="step-number">3</div>
-                    <h3>Create Campaign</h3>
-                    <p>Choose your channel, craft your message, and select recipients</p>
+                    <h3>Send Messages</h3>
+                    <p>Deliver SMS, WhatsApp, and Email campaigns instantly or schedule them for later. Our system handles the heavy lifting.</p>
                 </div>
                 <div class="step">
                     <div class="step-number">4</div>
-                    <h3>Send & Track</h3>
-                    <p>Send your campaign and monitor delivery status in real-time</p>
+                    <h3>Track Results</h3>
+                    <p>Monitor delivery rates, open rates, and engagement metrics in real-time. Get detailed analytics and reports.</p>
                 </div>
             </div>
         </div>
@@ -1609,6 +1821,60 @@
                     <div class="channel-icon"><i class="fas fa-envelope"></i></div>
                     <h3>Email</h3>
                     <p>Professional HTML emails with tracking. Ideal for detailed communications and newsletters.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Why Choose Us Section -->
+    <section class="why-choose-us">
+        <div class="container">
+            <div class="section-header">
+                <h2>Why Choose BulkSMS CRM?</h2>
+                <p>Trusted by businesses across Kenya and beyond for reliable messaging solutions</p>
+            </div>
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Enterprise Security</h3>
+                    <p>Bank-level encryption, API authentication, and comprehensive audit trails to keep your data safe.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i class="fas fa-rocket"></i>
+                    </div>
+                    <h3>Lightning Fast Setup</h3>
+                    <p>Get started in under 2 minutes with our streamlined onboarding process. No technical expertise required.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Real-Time Analytics</h3>
+                    <p>Track delivery rates, engagement metrics, and campaign performance with detailed analytics dashboard.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i class="fas fa-headset"></i>
+                    </div>
+                    <h3>24/7 Support</h3>
+                    <p>Dedicated support team available around the clock to help you succeed with your messaging campaigns.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Multi-Channel Reach</h3>
+                    <p>Send SMS, WhatsApp, and Email from one platform. Reach your customers wherever they are.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="benefit-icon">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                    <h3>Transparent Pricing</h3>
+                    <p>No hidden fees, no contracts. Pay only for what you use with our flexible pricing model.</p>
                 </div>
             </div>
         </div>
@@ -1756,8 +2022,15 @@
                 <h2>Start Sending Messages Today</h2>
                 <p>Join hundreds of businesses already using our platform to communicate better with their customers.</p>
                 <div class="cta-buttons">
-                    <a href="#contact" class="btn btn-primary btn-large">Get Started Free</a>
-                    <a href="{{ route('api.documentation') }}" class="btn btn-secondary btn-large">View API Docs</a>
+                    <a href="{{ route('tenant.register') }}" class="btn btn-primary btn-large">
+                        <i class="fas fa-rocket"></i> Start Your Free Trial
+                    </a>
+                    <a href="{{ route('api.documentation') }}" class="btn btn-secondary btn-large">
+                        <i class="fas fa-code"></i> View API Docs
+                    </a>
+                </div>
+                <div class="cta-note">
+                    <p><i class="fas fa-shield-alt"></i> Secure • <i class="fas fa-clock"></i> Quick Setup • <i class="fas fa-gift"></i> Free Trial</p>
                 </div>
             </div>
         </div>
@@ -1801,7 +2074,7 @@
                     <li><a href="{{ route('api.documentation') }}">API Documentation</a></li>
                     <li><a href="mailto:mathiasodhis@gmail.com">Email Support</a></li>
                     <li><a href="tel:+254728883160">Call Us</a></li>
-                    <li><a href="{{ route('login') }}">Admin Login</a></li>
+                    <li><a href="{{ route('login') }}">Login</a></li>
                 </ul>
             </div>
             <div class="footer-section footer-newsletter">

@@ -45,6 +45,21 @@ class Client extends Model
     ];
 
     /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        // Invalidate cache when client is updated
+        static::updated(function ($client) {
+            \App\Services\Cache\ClientSettingsCache::invalidate($client->id);
+        });
+
+        static::deleted(function ($client) {
+            \App\Services\Cache\ClientSettingsCache::invalidate($client->id);
+        });
+    }
+
+    /**
      * Get the contacts for the client.
      */
     public function contacts(): HasMany
@@ -74,6 +89,14 @@ class Client extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    /**
+     * Get the transactions for the client.
+     */
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(Transaction::class);
     }
 
     /**

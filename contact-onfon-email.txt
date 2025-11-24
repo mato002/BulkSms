@@ -1,0 +1,63 @@
+Subject: Request to Disable Sender ID Filter or Register "MATECHTE" Sender ID
+
+Dear Onfon Media Support Team,
+
+I am writing regarding our Onfon Media account. We are experiencing an issue with sender ID restrictions that is affecting our business operations.
+
+ACCOUNT DETAILS:
+- Client ID: e27847c1-a9fe-4eef-b60d-ddb291b175ab
+- API Key: VKft5j+GOeSXYSlk+sADT/nx5UMVpcmengSPk9Ou4Ak=
+- Access Key Header: 8oj1kheKHtCX6RiiOOI1sNS9Ir88CXnB
+
+ISSUE:
+We are receiving the following error when attempting to send SMS with sender ID "MATECHTE":
+"Onfon MessageErrorCode 401: Value filter failed for user [e27847c1-a9fe-4eef-b60d-ddb291b175ab] (source_address filter mismatch)."
+
+BUSINESS MODEL:
+We operate a multi-tenant SMS platform (BulkSMS CRM) where:
+- We pay Onfon Media for SMS gateway services
+- Our clients pay us for SMS services
+- Each client has their own registered sender ID (e.g., "MATECHTE", "FORTRESS", "PRADY_TECH", etc.)
+
+REQUEST:
+We have two requests, in order of preference:
+
+1. PRIMARY REQUEST: Disable the sender ID filter/whitelist for our account
+   Since we are the paying customer managing multiple businesses, we need the ability to use ANY sender ID from our account without restrictions. This will allow us to:
+   - Onboard new clients immediately without waiting for sender ID approval
+   - Use any sender ID our clients are registered with
+   - Scale our business more efficiently
+
+2. ALTERNATIVE REQUEST: Register "MATECHTE" sender ID
+   If disabling the filter is not possible, please register the sender ID "MATECHTE" for our account. We can provide any required documentation (business registration, Letter of Authorization, etc.).
+
+ADDITIONAL QUESTIONS:
+- Is there a way to register multiple sender IDs in bulk?
+- Do you offer an enterprise/premium plan that allows unrestricted sender IDs?
+- Is there an API endpoint to register sender IDs programmatically?
+
+IMPACT:
+This issue is currently blocking our ability to serve one of our clients (Matech Technologies) and may affect future client onboarding.
+
+We appreciate your prompt attention to this matter and are available to provide any additional information or documentation you may require.
+
+Thank you for your assistance.
+
+Best regards,
+[Your Name]
+[Your Title]
+[Company Name]
+[Phone Number]
+[Email Address]
+
+---
+Account: e27847c1-a9fe-4eef-b60d-ddb291b175ab
+Error: MessageErrorCode 401 - source_address filter mismatch
+Sender ID: MATECHTE
+
+
+
+
+
+
+

@@ -329,35 +329,73 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+    .modern-page-container {
+        padding: 0.5rem;
+    }
+    
     .chat-container {
-        height: calc(100vh - 150px);
+        height: calc(100vh - 100px);
+        border-radius: 8px;
     }
     
     .chat-header {
-        padding: 1rem;
+        padding: 0.75rem;
+        flex-wrap: wrap;
     }
     
     .chat-header-left {
         gap: 0.5rem;
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .chat-header-right {
+        flex-wrap: wrap;
+        gap: 0.5rem;
     }
     
     .chat-avatar {
-        width: 40px;
-        height: 40px;
-        font-size: 0.875rem;
+        width: 36px;
+        height: 36px;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+    }
+    
+    .chat-user-info {
+        min-width: 0;
+        flex: 1;
+    }
+    
+    .chat-user-name {
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .chat-user-details {
+        font-size: 0.75rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .chat-messages {
-        padding: 1rem;
+        padding: 0.75rem;
     }
     
     .message-bubble {
-        max-width: 85%;
+        max-width: 90%;
         padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .message-meta {
+        font-size: 0.65rem;
     }
     
     .chat-footer {
-        padding: 1rem;
+        padding: 0.75rem;
     }
     
     .reply-input-wrapper {
@@ -365,9 +403,70 @@
         gap: 0.5rem;
     }
     
+    .reply-textarea {
+        font-size: 0.9rem;
+        padding: 0.75rem;
+    }
+    
     .btn-send {
         width: 100%;
         justify-content: center;
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .reply-hint {
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .chat-container {
+        height: calc(100vh - 80px);
+        border-radius: 0;
+        margin: 0;
+    }
+    
+    .chat-header {
+        padding: 0.5rem;
+    }
+    
+    .chat-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.75rem;
+    }
+    
+    .chat-user-name {
+        font-size: 0.85rem;
+    }
+    
+    .chat-user-details {
+        font-size: 0.7rem;
+    }
+    
+    .chat-messages {
+        padding: 0.5rem;
+    }
+    
+    .message-bubble {
+        max-width: 95%;
+        padding: 0.6rem 0.8rem;
+        font-size: 0.85rem;
+    }
+    
+    .chat-footer {
+        padding: 0.5rem;
+    }
+    
+    .reply-textarea {
+        font-size: 0.85rem;
+        padding: 0.6rem;
+    }
+    
+    .btn-send {
+        padding: 0.6rem 0.8rem;
+        font-size: 0.85rem;
     }
 }
 </style>

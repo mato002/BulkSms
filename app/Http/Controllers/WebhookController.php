@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Notification as CustomNotification;
 
 class WebhookController extends Controller
 {
@@ -102,6 +103,20 @@ class WebhookController extends Controller
                     'unread_messages' => DB::raw('unread_messages + 1'),
                     'updated_at' => now(),
                 ]);
+
+            // Create notification for new SMS message
+            try {
+                $contactName = DB::table('contacts')->where('id', $contactId)->value('name') ?: $from;
+                CustomNotification::newMessage(
+                    $contact->client_id ?? 1,
+                    $contactName,
+                    $messageText,
+                    $conversationId,
+                    'sms'
+                );
+            } catch (\Exception $e) {
+                Log::warning('Failed to create SMS message notification', ['error' => $e->getMessage()]);
+            }
         }
 
         return response()->json(['status' => 'received'], 200);

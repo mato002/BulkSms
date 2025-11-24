@@ -6,6 +6,7 @@ use App\Models\Client;
 use App\Models\User;
 use App\Models\Message;
 use App\Models\Campaign;
+use App\Models\Notification;
 use App\Services\OnfonWalletService;
 use App\Mail\WelcomeSenderMail;
 use Illuminate\Http\Request;
@@ -104,6 +105,17 @@ class AdminController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
+        // Prepare settings with Onfon credentials if provided
+        $settings = $request->settings ?? [];
+        if ($request->has('enable_onfon') && $request->onfon_api_key && $request->onfon_client_id) {
+            $settings['onfon_credentials'] = [
+                'api_key' => $request->onfon_api_key,
+                'client_id' => $request->onfon_client_id,
+                'access_key_header' => $request->onfon_access_key ?? '8oj1kheKHtCX6RiiOOI1sNS9Ir88CXnB',
+                'default_sender' => $request->default_sender ?? strtoupper($request->sender_id),
+            ];
+        }
+
         // Create client
         $client = Client::create([
             'name' => $request->name,
@@ -114,7 +126,8 @@ class AdminController extends Controller
             'price_per_unit' => $request->price_per_unit ?? 1.00,
             'api_key' => $this->generateApiKey(),
             'status' => $request->status ?? true,
-            'settings' => $request->settings ?? []
+            'settings' => $settings,
+            'auto_sync_balance' => $request->has('auto_sync_balance') && $request->auto_sync_balance,
         ]);
 
         // Create user for client if requested
@@ -138,6 +151,13 @@ class AdminController extends Controller
                 'client_id' => $client->id,
                 'error' => $e->getMessage()
             ]);
+        }
+
+        // Create notification for sender creation
+        try {
+            Notification::senderCreated($client->id, $client->name, $client->sender_id, auth()->id());
+        } catch (\Exception $e) {
+            \Log::error('Failed to create sender creation notification', ['error' => $e->getMessage()]);
         }
 
         return redirect()->route('admin.senders.show', $client->id)
@@ -211,6 +231,12 @@ class AdminController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
+        $changes = [];
+        $oldName = $client->name;
+        $oldContact = $client->contact;
+        $oldSenderId = $client->sender_id;
+        $oldStatus = $client->status;
+
         $client->update([
             'name' => $request->name,
             'contact' => $request->contact,
@@ -218,6 +244,27 @@ class AdminController extends Controller
             'balance' => $request->balance ?? $client->balance,
             'status' => $request->has('status') ? $request->status : $client->status,
         ]);
+
+        // Track changes
+        if ($oldName !== $request->name) $changes[] = 'name';
+        if ($oldContact !== $request->contact) $changes[] = 'contact';
+        if ($oldSenderId !== strtoupper($request->sender_id)) $changes[] = 'sender_id';
+        if ($oldStatus != $client->status) {
+            try {
+                Notification::senderStatusChanged($client->id, $client->name, $oldStatus, $client->status, auth()->id());
+            } catch (\Exception $e) {
+                \Log::error('Failed to create status change notification', ['error' => $e->getMessage()]);
+            }
+        }
+
+        // Create notification for sender update
+        if (!empty($changes)) {
+            try {
+                Notification::senderUpdated($client->id, $client->name, $changes, auth()->id());
+            } catch (\Exception $e) {
+                \Log::error('Failed to create sender update notification', ['error' => $e->getMessage()]);
+            }
+        }
 
         return redirect()->route('admin.senders.show', $client->id)
             ->with('success', 'Sender updated successfully!');
@@ -239,7 +286,18 @@ class AdminController extends Controller
             return back()->with('error', 'Cannot delete the default client!');
         }
 
+        $senderName = $client->name;
+        $senderId = $client->sender_id;
+        $deletedBy = auth()->id();
+
         $client->delete();
+
+        // Create notification for sender deletion
+        try {
+            Notification::senderDeleted($senderName, $senderId, $deletedBy);
+        } catch (\Exception $e) {
+            \Log::error('Failed to create sender deletion notification', ['error' => $e->getMessage()]);
+        }
 
         return redirect()->route('admin.senders.index')
             ->with('success', 'Sender deleted successfully!');
@@ -258,6 +316,13 @@ class AdminController extends Controller
         $newApiKey = $this->generateApiKey();
         
         $client->update(['api_key' => $newApiKey]);
+
+        // Create notification for API key regeneration
+        try {
+            Notification::apiKeyRegenerated($client->id, $client->name, auth()->id());
+        } catch (\Exception $e) {
+            \Log::error('Failed to create API key regeneration notification', ['error' => $e->getMessage()]);
+        }
 
         return back()->with('success', 'API Key regenerated successfully! New Key: ' . $newApiKey);
     }
@@ -284,6 +349,7 @@ class AdminController extends Controller
         $client = Client::findOrFail($id);
         $isUnits = $request->type === 'units';
         $amountInKsh = $isUnits ? $client->unitsToKsh($request->amount) : $request->amount;
+        $oldBalance = $client->balance;
 
         switch ($request->action) {
             case 'add':
@@ -299,6 +365,13 @@ class AdminController extends Controller
 
         $client->save();
 
+        // Create notification for balance change
+        try {
+            Notification::balanceChanged($client->id, $client->name, $request->action, $amountInKsh, $oldBalance, $client->balance, auth()->id());
+        } catch (\Exception $e) {
+            \Log::error('Failed to create balance change notification', ['error' => $e->getMessage()]);
+        }
+
         return back()->with('success', 'Balance updated successfully! New balance: ' . number_format($client->balance, 2));
     }
 
@@ -312,8 +385,16 @@ class AdminController extends Controller
         }
 
         $client = Client::findOrFail($id);
+        $oldStatus = $client->status;
         $client->status = !$client->status;
         $client->save();
+
+        // Create notification for status change
+        try {
+            Notification::senderStatusChanged($client->id, $client->name, $oldStatus, $client->status, auth()->id());
+        } catch (\Exception $e) {
+            \Log::error('Failed to create status change notification', ['error' => $e->getMessage()]);
+        }
 
         $status = $client->status ? 'activated' : 'deactivated';
         return back()->with('success', "Sender {$status} successfully!");
@@ -365,6 +446,13 @@ class AdminController extends Controller
         $client->settings = $settings;
         $client->auto_sync_balance = $request->has('auto_sync_balance');
         $client->save();
+
+        // Create notification for Onfon credentials update
+        try {
+            Notification::onfonCredentialsUpdated($client->id, $client->name, auth()->id());
+        } catch (\Exception $e) {
+            \Log::error('Failed to create Onfon credentials update notification', ['error' => $e->getMessage()]);
+        }
 
         return back()->with('success', 'Onfon credentials updated successfully!');
     }
@@ -475,6 +563,204 @@ class AdminController extends Controller
             'success' => false,
             'message' => $result['message'] ?? 'Failed to fetch transactions'
         ], 400);
+    }
+
+    /**
+     * Display list of admin users
+     */
+    public function admins(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $search = $request->get('search');
+        $perPage = $request->get('per_page', 15);
+
+        $query = User::where('role', 'admin')
+            ->where('client_id', 1); // Admin users belong to client_id 1
+
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $admins = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
+        return view('admin.admins.index', compact('admins'));
+    }
+
+    /**
+     * Show form to create a new admin user
+     */
+    public function createAdmin()
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        return view('admin.admins.create');
+    }
+
+    /**
+     * Store a new admin user
+     */
+    public function storeAdmin(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        $admin = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'client_id' => 1, // Admin users belong to client_id 1
+            'role' => 'admin',
+            'email_verified_at' => now(),
+        ]);
+
+        // Create notification for admin creation
+        try {
+            Notification::adminCreated($admin->id, $admin->name, $admin->email, auth()->id());
+        } catch (\Exception $e) {
+            // Log error but don't fail the request
+            \Log::error('Failed to create admin creation notification', ['error' => $e->getMessage()]);
+        }
+
+        return redirect()->route('admin.admins.index')
+            ->with('success', 'Admin user created successfully!');
+    }
+
+    /**
+     * Show form to edit an admin user
+     */
+    public function editAdmin($id)
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $admin = User::where('role', 'admin')
+            ->where('client_id', 1)
+            ->findOrFail($id);
+
+        return view('admin.admins.edit', compact('admin'));
+    }
+
+    /**
+     * Update an admin user
+     */
+    public function updateAdmin(Request $request, $id)
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $admin = User::where('role', 'admin')
+            ->where('client_id', 1)
+            ->findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,' . $id,
+            'password' => 'nullable|string|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        $changes = [];
+        $oldName = $admin->name;
+        $oldEmail = $admin->email;
+
+        $updateData = [
+            'name' => $request->name,
+            'email' => $request->email,
+        ];
+
+        if ($request->filled('password')) {
+            $updateData['password'] = Hash::make($request->password);
+            $changes[] = 'password';
+        }
+
+        if ($oldName !== $request->name) {
+            $changes[] = 'name';
+        }
+        if ($oldEmail !== $request->email) {
+            $changes[] = 'email';
+        }
+
+        $admin->update($updateData);
+
+        // Create notification for admin update
+        if (!empty($changes)) {
+            try {
+                Notification::adminUpdated($admin->id, $admin->name, $changes, auth()->id());
+            } catch (\Exception $e) {
+                \Log::error('Failed to create admin update notification', ['error' => $e->getMessage()]);
+            }
+        }
+
+        return redirect()->route('admin.admins.index')
+            ->with('success', 'Admin user updated successfully!');
+    }
+
+    /**
+     * Delete an admin user
+     */
+    public function destroyAdmin($id)
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $admin = User::where('role', 'admin')
+            ->where('client_id', 1)
+            ->findOrFail($id);
+
+        // Prevent deleting yourself
+        if ($admin->id === auth()->id()) {
+            return back()->with('error', 'You cannot delete your own account!');
+        }
+
+        // Prevent deleting if it's the only admin
+        $adminCount = User::where('role', 'admin')
+            ->where('client_id', 1)
+            ->count();
+
+        if ($adminCount <= 1) {
+            return back()->with('error', 'Cannot delete the last admin user!');
+        }
+
+        $adminName = $admin->name;
+        $adminEmail = $admin->email;
+        $deletedBy = auth()->id();
+
+        $admin->delete();
+
+        // Create notification for admin deletion
+        try {
+            Notification::adminDeleted($adminName, $adminEmail, $deletedBy);
+        } catch (\Exception $e) {
+            \Log::error('Failed to create admin deletion notification', ['error' => $e->getMessage()]);
+        }
+
+        return redirect()->route('admin.admins.index')
+            ->with('success', 'Admin user deleted successfully!');
     }
 }
 

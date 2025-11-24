@@ -2,61 +2,54 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Contact;
+use App\Support\PhoneNumber;
+use Illuminate\Contracts\View\View;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\Contact;
 
 class ContactController extends Controller
 {
-    /**
-     * Format phone number with country code
-     */
-    private function formatPhoneNumber(string $phone): string
-    {
-        // Remove all non-numeric characters except +
-        $phone = preg_replace('/[^0-9+]/', '', $phone);
-        
-        // If already has country code, return as is
-        if (str_starts_with($phone, '+')) {
-            return $phone;
-        }
-        
-        // If starts with 0, remove it and add Kenya country code
-        if (str_starts_with($phone, '0')) {
-            return '+254' . substr($phone, 1);
-        }
-        
-        // If starts with 254, add +
-        if (str_starts_with($phone, '254')) {
-            return '+' . $phone;
-        }
-        
-        // If 9 digits (Kenya mobile without leading 0), add +254
-        if (strlen($phone) === 9) {
-            return '+254' . $phone;
-        }
-        
-        // Default: assume it needs Kenya country code
-        return '+254' . $phone;
-    }
-
-    public function index()
+    public function index(Request $request): View
     {
         $clientId = session('client_id', 1);
-        $contacts = DB::table('contacts')
-            ->where('client_id', $clientId)
-            ->orderBy('id', 'desc')
-            ->paginate(50);
+        $query = DB::table('contacts')
+            ->where('client_id', $clientId);
 
-        return view('contacts.index', compact('contacts'));
+        // Apply search filter
+        if ($request->filled('search')) {
+            $search = $request->get('search');
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('contact', 'like', "%{$search}%");
+            });
+        }
+
+        // Apply department filter
+        if ($request->filled('department')) {
+            $query->where('department', 'like', "%{$request->get('department')}%");
+        }
+
+        $contacts = $query->orderBy('id', 'desc')->paginate(50);
+
+        $availableTags = DB::table('tags')
+            ->where('client_id', $clientId)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('contacts.index', [
+            'contacts' => $contacts,
+            'availableTags' => $availableTags,
+        ]);
     }
 
-    public function create()
+    public function create(): View
     {
         return view('contacts.create');
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -67,7 +60,7 @@ class ContactController extends Controller
         $clientId = session('client_id', 1);
 
         // Format phone number with country code
-        $formattedContact = $this->formatPhoneNumber($validated['contact']);
+        $formattedContact = PhoneNumber::e164($validated['contact']);
 
         DB::table('contacts')->insert([
             'client_id' => $clientId,
@@ -81,7 +74,7 @@ class ContactController extends Controller
         return redirect()->route('contacts.index')->with('success', 'Contact created successfully');
     }
 
-    public function show(string $id)
+    public function show(string $id): View
     {
         $clientId = session('client_id', 1);
         $contact = DB::table('contacts')
@@ -93,10 +86,29 @@ class ContactController extends Controller
             abort(404);
         }
 
-        return view('contacts.show', compact('contact'));
+        // Get contact tags
+        $contactTags = DB::table('contact_tag')
+            ->join('tags', 'contact_tag.tag_id', '=', 'tags.id')
+            ->where('contact_tag.contact_id', $contact->id)
+            ->where('tags.client_id', $clientId)
+            ->select('tags.id', 'tags.name', 'tags.color')
+            ->get();
+
+        // Get recent messages
+        $recentMessages = DB::table('messages')
+            ->where('client_id', $clientId)
+            ->where(function($q) use ($contact) {
+                $q->where('recipient', $contact->contact)
+                  ->orWhere('sender', $contact->contact);
+            })
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+        return view('contacts.show', compact('contact', 'contactTags', 'recentMessages'));
     }
 
-    public function edit(string $id)
+    public function edit(string $id): View
     {
         $clientId = session('client_id', 1);
         $contact = DB::table('contacts')
@@ -111,7 +123,7 @@ class ContactController extends Controller
         return view('contacts.edit', compact('contact'));
     }
 
-    public function update(Request $request, string $id)
+    public function update(Request $request, string $id): RedirectResponse
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -122,7 +134,7 @@ class ContactController extends Controller
         $clientId = session('client_id', 1);
 
         // Format phone number with country code
-        $formattedContact = $this->formatPhoneNumber($validated['contact']);
+        $formattedContact = PhoneNumber::e164($validated['contact']);
 
         DB::table('contacts')
             ->where('client_id', $clientId)
@@ -137,7 +149,7 @@ class ContactController extends Controller
         return redirect()->route('contacts.index')->with('success', 'Contact updated successfully');
     }
 
-    public function destroy(string $id)
+    public function destroy(string $id): RedirectResponse
     {
         $clientId = session('client_id', 1);
 
@@ -149,7 +161,7 @@ class ContactController extends Controller
         return redirect()->route('contacts.index')->with('success', 'Contact deleted successfully');
     }
 
-    public function import(Request $request)
+    public function import(Request $request): RedirectResponse
     {
         $request->validate([
             'csv_file' => 'required|file|mimes:csv,txt|max:10240',
@@ -165,7 +177,7 @@ class ContactController extends Controller
         while (($row = fgetcsv($handle)) !== false) {
             if (count($row) >= 2) {
                 // Format phone number with country code
-                $formattedContact = $this->formatPhoneNumber($row[1] ?? '');
+                $formattedContact = PhoneNumber::e164($row[1] ?? '');
                 
                 DB::table('contacts')->insert([
                     'client_id' => $clientId,
@@ -182,5 +194,85 @@ class ContactController extends Controller
         fclose($handle);
 
         return redirect()->route('contacts.index')->with('success', "Imported {$imported} contacts successfully");
+    }
+
+    /**
+     * Handle bulk actions (delete, tag) on selected contacts.
+     */
+    public function bulkAction(Request $request): RedirectResponse
+    {
+        $clientId = session('client_id', 1);
+
+        $validated = $request->validate([
+            'selected_contacts' => 'required|array|min:1',
+            'selected_contacts.*' => 'integer',
+            'bulk_action' => 'required|in:delete,tag',
+            'tag_id' => 'nullable|integer',
+        ]);
+
+        $contactIds = DB::table('contacts')
+            ->where('client_id', $clientId)
+            ->whereIn('id', $validated['selected_contacts'])
+            ->pluck('id')
+            ->all();
+
+        if (empty($contactIds)) {
+            return redirect()
+                ->route('contacts.index')
+                ->with('error', 'None of the selected contacts are available for the chosen action.');
+        }
+
+        if ($validated['bulk_action'] === 'delete') {
+            DB::table('contacts')
+                ->where('client_id', $clientId)
+                ->whereIn('id', $contactIds)
+                ->delete();
+
+            // Clean up pivot table entries
+            DB::table('contact_tag')->whereIn('contact_id', $contactIds)->delete();
+
+            $message = count($contactIds) . ' contact(s) deleted successfully.';
+
+            return redirect()
+                ->route('contacts.index')
+                ->with('success', $message);
+        }
+
+        // Bulk tag application
+        if (!$request->filled('tag_id')) {
+            return redirect()
+                ->route('contacts.index')
+                ->with('error', 'Select a tag before applying it to contacts.');
+        }
+
+        $tag = DB::table('tags')
+            ->where('client_id', $clientId)
+            ->where('id', $request->integer('tag_id'))
+            ->first();
+
+        if (!$tag) {
+            return redirect()
+                ->route('contacts.index')
+                ->with('error', 'The selected tag is no longer available.');
+        }
+
+        $timestamp = now();
+        $rows = collect($contactIds)->map(function ($contactId) use ($request, $timestamp) {
+            return [
+                'contact_id' => $contactId,
+                'tag_id' => $request->integer('tag_id'),
+                'tagged_at' => $timestamp,
+            ];
+        })->toArray();
+
+        DB::table('contact_tag')->upsert(
+            $rows,
+            ['contact_id', 'tag_id'],
+            ['tagged_at']
+        );
+
+        return redirect()
+            ->route('contacts.index')
+            ->with('success', 'Tag "' . $tag->name . '" applied to ' . count($contactIds) . ' contact(s).');
     }
 }

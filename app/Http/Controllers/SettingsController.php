@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Models\AdminSetting;
 use App\Models\AlertPhoneNumber;
@@ -22,12 +24,72 @@ class SettingsController extends Controller
         // Get all channels for this client
         $channels = DB::table('channels')->where('client_id', $clientId)->get();
         
-        // Decrypt credentials for display
-        $channelsWithCreds = $channels->map(function ($channel) {
-            $creds = json_decode($channel->credentials ?? '{}', true);
-            $channel->credentials_array = $creds;
-            return $channel;
-        });
+        // Define all available channel types
+        $availableChannels = [
+            'sms' => [
+                'name' => 'SMS',
+                'provider' => 'onfon',
+                'icon' => 'phone',
+                'description' => 'SMS messaging via Onfon Media'
+            ],
+            'whatsapp' => [
+                'name' => 'WhatsApp',
+                'provider' => 'ultramsg',
+                'icon' => 'whatsapp',
+                'description' => 'WhatsApp messaging via UltraMsg or WhatsApp Cloud API'
+            ],
+            'email' => [
+                'name' => 'Email',
+                'provider' => 'smtp',
+                'icon' => 'envelope',
+                'description' => 'Email messaging via SMTP'
+            ]
+        ];
+        
+        // Create a map of existing channels by name
+        $existingChannelsMap = $channels->keyBy('name');
+        
+        // Build channels list - ensure all channel types are shown
+        $channelsWithCreds = collect($availableChannels)->map(function ($channelInfo, $channelName) use ($existingChannelsMap, $client) {
+            $existingChannel = $existingChannelsMap->get($channelName);
+            
+            if ($existingChannel) {
+                // Channel exists - decode credentials
+                $creds = json_decode($existingChannel->credentials ?? '{}', true);
+                $existingChannel->credentials_array = $creds;
+                $existingChannel->channel_info = $channelInfo;
+                return $existingChannel;
+            } else {
+                // Channel doesn't exist - create a placeholder object
+                return (object) [
+                    'id' => null,
+                    'name' => $channelName,
+                    'provider' => $channelInfo['provider'],
+                    'active' => false,
+                    'credentials' => null,
+                    'credentials_array' => [],
+                    'channel_info' => $channelInfo,
+                    'exists' => false
+                ];
+            }
+        })->values();
+
+        // Attempt to read cached Onfon balance (with graceful fallback if Redis extension is missing)
+        $onfonBalance = 0.0;
+        $onfonBalanceLastRefreshed = 'Never';
+        $onfonCacheAvailable = true;
+
+        try {
+            $onfonBalance = (float) Cache::get('onfon_system_balance', 0);
+            $onfonBalanceLastRefreshed = Cache::has('onfon_system_balance') ? 'Recently' : 'Never';
+        } catch (\Throwable $exception) {
+            $onfonCacheAvailable = false;
+
+            Log::warning('Unable to read Onfon balance from cache', [
+                'client_id' => $clientId,
+                'message' => $exception->getMessage(),
+            ]);
+        }
 
         // Get admin settings if user is admin
         $adminSettings = null;
@@ -37,7 +99,18 @@ class SettingsController extends Controller
             $phoneNumbers = AlertPhoneNumber::orderBy('created_at', 'desc')->get();
         }
 
-        return view('settings.index', compact('client', 'channelsWithCreds', 'adminSettings', 'phoneNumbers'));
+        $selectedChannel = request()->query('channel');
+
+        return view('settings.index', compact(
+            'client',
+            'channelsWithCreds',
+            'adminSettings',
+            'phoneNumbers',
+            'onfonBalance',
+            'onfonBalanceLastRefreshed',
+            'onfonCacheAvailable',
+            'selectedChannel'
+        ));
     }
 
     public function updateClient(Request $request)
@@ -81,21 +154,59 @@ class SettingsController extends Controller
             'client_id_value' => 'nullable|string',
             'access_key_header' => 'nullable|string',
             'default_sender' => 'nullable|string',
+            // SMTP/Email fields
+            'smtp_host' => 'nullable|string',
+            'smtp_port' => 'nullable|integer',
+            'smtp_username' => 'nullable|string',
+            'smtp_password' => 'nullable|string',
+            'smtp_encryption' => 'nullable|in:tls,ssl',
+            'from_email' => 'nullable|email',
+            'from_name' => 'nullable|string',
         ]);
 
-        // Build credentials array
+        // Build credentials array based on provider
         $credentials = [];
-        if ($request->filled('api_key')) {
-            $credentials['api_key'] = $validated['api_key'];
-        }
-        if ($request->filled('client_id_value')) {
-            $credentials['client_id'] = $validated['client_id_value'];
-        }
-        if ($request->filled('access_key_header')) {
-            $credentials['access_key_header'] = $validated['access_key_header'];
-        }
-        if ($request->filled('default_sender')) {
-            $credentials['default_sender'] = $validated['default_sender'];
+        
+        if ($channel->provider === 'onfon') {
+            // Onfon SMS credentials
+            if ($request->filled('api_key')) {
+                $credentials['api_key'] = $validated['api_key'];
+            }
+            if ($request->filled('client_id_value')) {
+                $credentials['client_id'] = $validated['client_id_value'];
+            }
+            if ($request->filled('access_key_header')) {
+                $credentials['access_key_header'] = $validated['access_key_header'];
+            }
+            if ($request->filled('default_sender')) {
+                $credentials['default_sender'] = $validated['default_sender'];
+            }
+        } elseif ($channel->provider === 'smtp') {
+            // SMTP Email credentials
+            $existingCreds = json_decode($channel->credentials ?? '{}', true);
+            $credentials = $existingCreds; // Preserve existing values
+            
+            if ($request->filled('smtp_host')) {
+                $credentials['host'] = $validated['smtp_host'];
+            }
+            if ($request->filled('smtp_port')) {
+                $credentials['port'] = $validated['smtp_port'];
+            }
+            if ($request->filled('smtp_username')) {
+                $credentials['username'] = $validated['smtp_username'];
+            }
+            if ($request->filled('smtp_password')) {
+                $credentials['password'] = $validated['smtp_password'];
+            }
+            if ($request->filled('smtp_encryption')) {
+                $credentials['encryption'] = $validated['smtp_encryption'];
+            }
+            if ($request->filled('from_email')) {
+                $credentials['from_email'] = $validated['from_email'];
+            }
+            if ($request->filled('from_name')) {
+                $credentials['from_name'] = $validated['from_name'];
+            }
         }
 
         DB::table('channels')
@@ -106,7 +217,9 @@ class SettingsController extends Controller
                 'updated_at' => now(),
             ]);
 
-        return redirect()->route('settings.index')->with('success', 'Channel updated successfully');
+        return redirect()
+            ->route('settings.index', ['channel' => $channel->name])
+            ->with('success', 'Channel updated successfully');
     }
 
     public function regenerateApiKey()
@@ -198,5 +311,69 @@ class SettingsController extends Controller
         $phoneNumber->delete();
 
         return back()->with('success', 'Phone number deleted successfully!');
+    }
+
+    public function createChannel(Request $request)
+    {
+        $clientId = session('client_id', 1);
+        
+        $validated = $request->validate([
+            'name' => 'required|in:sms,whatsapp,email',
+            'provider' => 'required|string',
+        ]);
+
+        // Check if channel already exists
+        $existing = DB::table('channels')
+            ->where('client_id', $clientId)
+            ->where('name', $validated['name'])
+            ->first();
+
+        if ($existing) {
+            return back()->with('error', 'Channel already exists!');
+        }
+
+        // Get client info for defaults
+        $client = DB::table('clients')->where('id', $clientId)->first();
+
+        // Default credentials based on channel type
+        $credentials = [];
+        if ($validated['name'] === 'sms') {
+            $onfonConfig = config('sms.gateways.onfon', []);
+            $credentials = [
+                'api_key' => $onfonConfig['api_key'] ?? '',
+                'client_id' => $onfonConfig['client_id'] ?? '',
+                'access_key_header' => env('ONFON_ACCESS_KEY_HEADER', '8oj1kheKHtCX6RiiOOI1sNS9Ir88CXnB'),
+                'default_sender' => $client->sender_id ?? 'DEFAULT',
+            ];
+        } elseif ($validated['name'] === 'email') {
+            $credentials = [
+                'host' => 'smtp.gmail.com',
+                'port' => 587,
+                'username' => '',
+                'password' => '',
+                'encryption' => 'tls',
+                'from_email' => $client->contact ?? 'noreply@example.com',
+                'from_name' => $client->name ?? 'BulkSMS Platform'
+            ];
+        } elseif ($validated['name'] === 'whatsapp') {
+            $credentials = [
+                'instance_id' => '',
+                'token' => '',
+            ];
+        }
+
+        DB::table('channels')->insert([
+            'client_id' => $clientId,
+            'name' => $validated['name'],
+            'provider' => $validated['provider'],
+            'credentials' => json_encode($credentials),
+            'active' => false, // Inactive by default until configured
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()
+            ->route('settings.index', ['channel' => $validated['name']])
+            ->with('success', ucfirst($validated['name']) . ' channel created successfully! Please configure it below.');
     }
 }

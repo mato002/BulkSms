@@ -2,12 +2,31 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Notification as CustomNotification;
 use App\Models\NotificationSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class NotificationController extends Controller
 {
+    /**
+     * Show notifications index page
+     */
+    public function index()
+    {
+        $user = Auth::user();
+        $notifications = CustomNotification::where('user_id', $user->id)
+            ->latest()
+            ->paginate(20);
+
+        // Get notification settings
+        $clientId = session('client_id', 1);
+        $userId = Auth::id();
+        $settings = NotificationSetting::getForClient($clientId, $userId);
+
+        return view('notifications.index', compact('notifications', 'settings'));
+    }
+
     /**
      * Show notification settings
      */
@@ -59,7 +78,9 @@ class NotificationController extends Controller
     public function unreadCount()
     {
         $user = Auth::user();
-        $count = $user->unreadNotifications()->count();
+        $count = CustomNotification::where('user_id', $user->id)
+            ->where('is_read', false)
+            ->count();
 
         return response()->json([
             'count' => $count,
@@ -72,18 +93,25 @@ class NotificationController extends Controller
     public function getNotifications(Request $request)
     {
         $user = Auth::user();
-        $limit = $request->get('limit', 10);
+        $limit = (int) $request->get('limit', 10);
 
-        $notifications = $user->notifications()
+        $notifications = CustomNotification::where('user_id', $user->id)
+            ->latest()
             ->take($limit)
             ->get()
-            ->map(function ($notification) {
+            ->map(function (CustomNotification $notification) {
                 return [
                     'id' => $notification->id,
                     'type' => $notification->type,
-                    'data' => $notification->data,
+                    'data' => [
+                        'title' => $notification->title,
+                        'message' => $notification->message,
+                        'type' => $notification->type,
+                        'action_url' => $notification->link,
+                    ],
+                    'metadata' => $notification->metadata,
                     'read_at' => $notification->read_at,
-                    'created_at' => $notification->created_at->diffForHumans(),
+                    'created_at' => optional($notification->created_at)->diffForHumans(),
                 ];
             });
 
@@ -98,7 +126,7 @@ class NotificationController extends Controller
     public function markAsRead($id)
     {
         $user = Auth::user();
-        $notification = $user->notifications()->find($id);
+        $notification = CustomNotification::where('user_id', $user->id)->find($id);
 
         if ($notification) {
             $notification->markAsRead();
@@ -115,7 +143,12 @@ class NotificationController extends Controller
     public function markAllAsRead()
     {
         $user = Auth::user();
-        $user->unreadNotifications()->update(['read_at' => now()]);
+        CustomNotification::where('user_id', $user->id)
+            ->where('is_read', false)
+            ->update([
+                'is_read' => true,
+                'read_at' => now(),
+            ]);
 
         return response()->json([
             'success' => true,
@@ -128,7 +161,7 @@ class NotificationController extends Controller
     public function delete($id)
     {
         $user = Auth::user();
-        $notification = $user->notifications()->find($id);
+        $notification = CustomNotification::where('user_id', $user->id)->find($id);
 
         if ($notification) {
             $notification->delete();

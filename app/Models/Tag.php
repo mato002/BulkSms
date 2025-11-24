@@ -50,8 +50,7 @@ class Tag extends Model
      */
     public function contacts()
     {
-        return $this->belongsToMany(Contact::class, 'contact_tag')
-                    ->withTimestamps();
+        return $this->belongsToMany(Contact::class, 'contact_tag');
     }
 
     /**

@@ -36,12 +36,15 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \Sentry\Laravel\Tracing\Middleware::class,
         ],
 
         'api' => [
             // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
             \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \Sentry\Laravel\Tracing\Middleware::class,
+            \App\Http\Middleware\CompressResponse::class,
         ],
     ];
 
@@ -68,5 +71,6 @@ class Kernel extends HttpKernel
         'company.auth' => \App\Http\Middleware\CompanyAuth::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
         'tier.rate.limit' => \App\Http\Middleware\TierBasedRateLimit::class,
+        'tenant.active' => \App\Http\Middleware\EnsureClientIsActive::class,
     ];
 }

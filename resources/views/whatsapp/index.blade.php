@@ -114,8 +114,11 @@
                         <button type="button" class="btn btn-outline-primary text-start" data-bs-toggle="modal" data-bs-target="#interactiveMessageModal" {{ $whatsappChannel && $whatsappChannel->isConfigured() ? '' : 'disabled' }}>
                             <i class="bi bi-menu-button"></i> Send Interactive Message
                         </button>
-                        <button type="button" class="btn btn-outline-primary text-start" onclick="syncTemplates()" {{ $whatsappChannel && $whatsappChannel->isConfigured() ? '' : 'disabled' }}>
+                        <button type="button" class="btn btn-outline-primary text-start" onclick="syncTemplates()" {{ $whatsappChannel && $whatsappChannel->isConfigured() && $whatsappChannel->provider !== 'ultramsg' ? '' : 'disabled' }}>
                             <i class="bi bi-arrow-repeat"></i> Sync Templates from WhatsApp
+                            @if($whatsappChannel && $whatsappChannel->provider === 'ultramsg')
+                                <small class="d-block text-muted">(Cloud API only)</small>
+                            @endif
                         </button>
                         <a href="{{ route('inbox.index') }}" class="btn btn-outline-primary text-start">
                             <i class="bi bi-inbox"></i> View WhatsApp Inbox
@@ -174,10 +177,18 @@
             @else
                 <div class="text-center py-5">
                     <i class="bi bi-file-text" style="font-size: 3rem; color: #ddd;"></i>
-                    <p class="text-muted mt-3">No templates found. Sync templates from WhatsApp Business Manager.</p>
-                    <button type="button" class="btn btn-primary" onclick="syncTemplates()" {{ $whatsappChannel && $whatsappChannel->isConfigured() ? '' : 'disabled' }}>
-                        <i class="bi bi-arrow-repeat"></i> Sync Templates
-                    </button>
+                    <p class="text-muted mt-3">
+                        @if($whatsappChannel && $whatsappChannel->provider === 'ultramsg')
+                            Templates are managed through UltraMsg dashboard. Template syncing is only available for WhatsApp Cloud API.
+                        @else
+                            No templates found. Sync templates from WhatsApp Business Manager.
+                        @endif
+                    </p>
+                    @if($whatsappChannel && $whatsappChannel->provider !== 'ultramsg')
+                        <button type="button" class="btn btn-primary" onclick="syncTemplates()" {{ $whatsappChannel && $whatsappChannel->isConfigured() ? '' : 'disabled' }}>
+                            <i class="bi bi-arrow-repeat"></i> Sync Templates
+                        </button>
+                    @endif
                 </div>
             @endif
         </div>

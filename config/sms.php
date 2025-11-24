@@ -16,6 +16,8 @@ return [
     'low_balance_threshold' => env('SMS_LOW_BALANCE_THRESHOLD', 1000),
     'admin_phone' => env('SMS_ADMIN_PHONE', '254722295194'),
 
+    'default_country_code' => env('SMS_DEFAULT_COUNTRY_CODE', '254'),
+
     'gateways' => [
         'mobitech' => [
             'url' => env('SMS_GATEWAY_URL', 'http://bulksms.mobitechtechnologies.com/api/sendsms'),
@@ -38,7 +40,7 @@ return [
                 'AHADI_EPEX', 'MWEGUNI_LTD', 'PRADY_TECH', 'ZEN_PHARMA',
                 'PAGECAPITAL', 'NKR_A_CLUB', 'JIRANIHODAR', 'NOVA_BRIDGE',
                 'MALIK', 'NOBLE_MICRO', 'AMPLE_SWISS', 'NEWPRO_CAP',
-                'DAFACOM_LTD', 'EMPISAI_LTD', 'FANUKA_LTD'
+                'DAFACOM_LTD', 'EMPISAI_LTD', 'FANUKA_LTD', 'MATECHTE'
             ]
         ],
 

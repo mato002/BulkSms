@@ -37,7 +37,7 @@
                                     <tr>
                                         <th>Name</th>
                                         <th>Phone</th>
-                                        <th>Email</th>
+                                        <th>Department</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -46,7 +46,7 @@
                                     <tr>
                                         <td>{{ $contact->name }}</td>
                                         <td>{{ $contact->contact }}</td>
-                                        <td>{{ $contact->email ?? 'N/A' }}</td>
+                                        <td>{{ $contact->department ?? 'N/A' }}</td>
                                         <td>
                                             <a href="{{ route('contacts.show', $contact->id) }}" class="btn btn-sm btn-primary">View</a>
                                         </td>

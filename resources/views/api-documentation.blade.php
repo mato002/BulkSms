@@ -11,12 +11,12 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; line-height: 1.6; color: #333; background: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-         header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; margin-top: 200px; }
+         header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: fixed; top: 0; left: 0; right: 0; z-index: 1000; }
          header h1 { font-size: 2.5em; margin-bottom: 10px; }
          header p { font-size: 1.2em; opacity: 0.9; }
          header a:hover { background: rgba(255,255,255,0.2); }
-        .sidebar { position: fixed; left: 0; top: 200px; width: 250px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-height: calc(100vh - 220px); overflow-y: auto; }
+        .sidebar { position: fixed; left: 20px; top: 220px; width: 250px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-height: calc(100vh - 240px); overflow-y: auto; }
         .sidebar h3 { margin-bottom: 15px; color: #667eea; font-size: 1.1em; }
         .sidebar ul { list-style: none; }
         .sidebar li { margin-bottom: 8px; }

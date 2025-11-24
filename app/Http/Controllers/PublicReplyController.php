@@ -53,17 +53,21 @@ class PublicReplyController extends Controller
             return back()->with('error', 'Message not found');
         }
 
-        // Find or create contact
+        // Normalize phone number to ensure consistency
+        $normalizedRecipient = $this->normalizePhoneNumber($originalMessage->recipient);
+
+        // Find or create contact using normalized phone number
         $contact = DB::table('contacts')
-            ->where('contact', $originalMessage->recipient)
+            ->where('contact', $normalizedRecipient)
+            ->where('client_id', $originalMessage->client_id)
             ->first();
 
         if (!$contact) {
-            // Auto-create contact
+            // Auto-create contact with normalized phone number
             $contactId = DB::table('contacts')->insertGetId([
                 'client_id' => $originalMessage->client_id,
                 'name' => $originalMessage->recipient,
-                'contact' => $originalMessage->recipient,
+                'contact' => $normalizedRecipient,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -71,10 +75,11 @@ class PublicReplyController extends Controller
             $contactId = $contact->id;
         }
 
-        // Find or create conversation
+        // Find or create conversation using normalized phone number
         $conversation = DB::table('conversations')
             ->where('contact_id', $contactId)
             ->where('channel', $originalMessage->channel)
+            ->where('client_id', $originalMessage->client_id)
             ->first();
 
         if (!$conversation) {
@@ -82,7 +87,7 @@ class PublicReplyController extends Controller
                 'client_id' => $originalMessage->client_id,
                 'contact_id' => $contactId,
                 'channel' => $originalMessage->channel,
-                'contact_identifier' => $originalMessage->recipient,
+                'contact_identifier' => $normalizedRecipient,
                 'last_message_preview' => substr($validated['reply'], 0, 100),
                 'last_message_direction' => 'inbound',
                 'last_message_at' => now(),
@@ -113,7 +118,7 @@ class PublicReplyController extends Controller
             'channel' => $originalMessage->channel,
             'direction' => 'inbound',
             'provider' => 'web_reply',
-            'sender' => $originalMessage->recipient,
+            'sender' => $normalizedRecipient,
             'recipient' => $originalMessage->sender,
             'body' => $validated['reply'],
             'status' => 'received',
@@ -155,5 +160,37 @@ class PublicReplyController extends Controller
         } catch (\Throwable $e) {
             return null;
         }
+    }
+
+    /**
+     * Normalize phone number to ensure consistency with existing contacts
+     */
+    private function normalizePhoneNumber(string $phone): string
+    {
+        // Remove all non-numeric characters except +
+        $phone = preg_replace('/[^0-9+]/', '', $phone);
+        
+        // If already has country code, return as is
+        if (str_starts_with($phone, '+')) {
+            return $phone;
+        }
+        
+        // If starts with 0, remove it and add Kenya country code
+        if (str_starts_with($phone, '0')) {
+            return '+254' . substr($phone, 1);
+        }
+        
+        // If starts with 254, add +
+        if (str_starts_with($phone, '254')) {
+            return '+' . $phone;
+        }
+        
+        // If 9 digits (Kenya mobile without leading 0), add +254
+        if (strlen($phone) === 9) {
+            return '+254' . $phone;
+        }
+        
+        // Default: assume it needs Kenya country code
+        return '+254' . $phone;
     }
 }

@@ -30,7 +30,7 @@ class ProfileController extends Controller
         $recentActivity = $clientId 
             ? Message::where('client_id', $clientId)
                 ->latest()
-                ->take(10)
+                ->take(5)
                 ->get()
             : collect();
         
@@ -71,6 +71,13 @@ class ProfileController extends Controller
 
         $user->password = Hash::make($validated['password']);
         $user->save();
+
+        // Create notification for password change
+        try {
+            \App\Models\Notification::passwordChanged($user->id, $user->name);
+        } catch (\Exception $e) {
+            \Log::error('Failed to create password change notification', ['error' => $e->getMessage()]);
+        }
 
         return back()->with('success', 'Password updated successfully.');
     }

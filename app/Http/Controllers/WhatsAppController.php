@@ -461,12 +461,28 @@ class WhatsAppController extends Controller
             ->where('name', 'whatsapp')
             ->firstOrFail();
 
+        // Check if using UltraMsg (doesn't support template fetching)
+        if ($channel->provider === 'ultramsg') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Template syncing is only available for WhatsApp Cloud API. UltraMsg does not support this feature.'
+            ], 400);
+        }
+
         $credentials = is_string($channel->credentials) 
             ? json_decode($channel->credentials, true) 
             : $channel->credentials;
+        
         $businessAccountId = $credentials['business_account_id'] ?? null;
-        $accessToken = $credentials['access_token'];
+        $accessToken = $credentials['access_token'] ?? null;
         $apiVersion = $credentials['api_version'] ?? 'v21.0';
+
+        if (!$accessToken) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Access token not configured'
+            ], 400);
+        }
 
         if (!$businessAccountId) {
             return response()->json([

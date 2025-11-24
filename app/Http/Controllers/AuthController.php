@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Auth\Events\PasswordReset;
 use App\Models\User;
+use App\Models\Notification as CustomNotification;
 
 class AuthController extends Controller
 {
@@ -32,7 +33,100 @@ class AuthController extends Controller
             $user = Auth::user();
             session(['client_id' => $user->client_id ?? 1]);
 
+            // Security notification: successful login
+            try {
+                CustomNotification::create([
+                    'client_id' => $user->client_id ?? 1,
+                    'user_id' => $user->id,
+                    'type' => 'security_login_success',
+                    'title' => 'Login Successful',
+                    'message' => 'Successful login from ' . $request->ip(),
+                    'icon' => 'bi-shield-check',
+                    'color' => 'success',
+                    'metadata' => [
+                        'ip' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                        'time' => now()->toDateTimeString(),
+                    ],
+                ]);
+
+                // Also notify first admin (if not the same user)
+                $admin = User::where('role', 'admin')->first();
+                if ($admin && $admin->id !== $user->id) {
+                    CustomNotification::create([
+                        'client_id' => $admin->client_id ?? 1,
+                        'user_id' => $admin->id,
+                        'type' => 'security_login_success_user',
+                        'title' => 'User Login',
+                        'message' => $user->email . ' logged in from ' . $request->ip(),
+                        'icon' => 'bi-person-check',
+                        'color' => 'info',
+                        'metadata' => [
+                            'user_email' => $user->email,
+                            'ip' => $request->ip(),
+                            'user_agent' => $request->userAgent(),
+                            'time' => now()->toDateTimeString(),
+                        ],
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                // Do not block login on notification failure
+            }
+
+            // Redirect tenants: if inactive, go to onboarding/payment; if active, go to dashboard. Admins to main dashboard
+            if ($user->client_id && $user->client_id !== 1) {
+                $client = $user->client;
+                if ($client && !$client->status) {
+                    return redirect()->route('tenant.onboarding')
+                        ->with('info', 'Your account is pending activation. Complete onboarding to continue.');
+                }
+                return redirect()->route('tenant.dashboard');
+            }
+
             return redirect()->intended('/');
+        }
+
+        // Security notification: failed login attempt
+        try {
+            $user = User::where('email', $request->input('email'))->first();
+            $admin = User::where('role', 'admin')->first();
+
+            if ($user) {
+                CustomNotification::create([
+                    'client_id' => $user->client_id ?? 1,
+                    'user_id' => $user->id,
+                    'type' => 'security_login_failed',
+                    'title' => 'Failed Login Attempt',
+                    'message' => 'Failed login attempt from ' . $request->ip(),
+                    'icon' => 'bi-shield-exclamation',
+                    'color' => 'danger',
+                    'metadata' => [
+                        'ip' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                        'time' => now()->toDateTimeString(),
+                    ],
+                ]);
+            }
+
+            if ($admin) {
+                CustomNotification::create([
+                    'client_id' => $admin->client_id ?? 1,
+                    'user_id' => $admin->id,
+                    'type' => 'security_login_failed_admin',
+                    'title' => 'Failed Login Attempt',
+                    'message' => 'Failed login for ' . $request->input('email') . ' from ' . $request->ip(),
+                    'icon' => 'bi-shield-exclamation',
+                    'color' => 'warning',
+                    'metadata' => [
+                        'attempted_email' => $request->input('email'),
+                        'ip' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                        'time' => now()->toDateTimeString(),
+                    ],
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // ignore
         }
 
         return back()->withErrors([

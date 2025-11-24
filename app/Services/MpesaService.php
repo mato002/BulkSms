@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
+use App\Support\PhoneNumber;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 class MpesaService
 {
@@ -245,22 +246,9 @@ class MpesaService
      * @param string $phoneNumber
      * @return string
      */
-    protected function formatPhoneNumber($phoneNumber)
+    protected function formatPhoneNumber(string $phoneNumber): string
     {
-        // Remove any spaces, dashes, or plus signs
-        $phoneNumber = preg_replace('/[\s\-\+]/', '', $phoneNumber);
-
-        // If starts with 0, replace with 254
-        if (substr($phoneNumber, 0, 1) === '0') {
-            $phoneNumber = '254' . substr($phoneNumber, 1);
-        }
-
-        // If starts with 7 or 1, add 254
-        if (preg_match('/^[71]/', $phoneNumber)) {
-            $phoneNumber = '254' . $phoneNumber;
-        }
-
-        return $phoneNumber;
+        return PhoneNumber::withCountryCode($phoneNumber);
     }
 
     /**

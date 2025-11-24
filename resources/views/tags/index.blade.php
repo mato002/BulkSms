@@ -44,10 +44,10 @@
                                     </li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
-                                        <form action="{{ route('tags.destroy', $tag->id) }}" method="POST" onsubmit="return confirm('Delete this tag? It will be removed from all contacts.')">
+                                        <form action="{{ route('tags.destroy', $tag->id) }}" method="POST">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="dropdown-item text-danger">
+                                            <button type="submit" class="dropdown-item text-danger" onclick="confirmDelete(event, 'Delete this tag? It will be removed from all contacts.')">
                                                 <i class="fas fa-trash"></i> Delete
                                             </button>
                                         </form>

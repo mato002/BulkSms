@@ -4,16 +4,16 @@
 <div class="dashboard-container">
     <!-- Page Header -->
     <div class="page-header mb-4">
-        <div>
+        <div class="header-content">
             <h1 class="page-title mb-1">Dashboard</h1>
             <p class="text-muted mb-0">Welcome back! Here's what's happening with your messaging platform.</p>
         </div>
         <div class="header-actions">
             <button class="btn btn-outline-primary" onclick="location.reload()">
-                <i class="bi bi-arrow-clockwise me-2"></i>Refresh
+                <i class="bi bi-arrow-clockwise me-2"></i><span class="d-none d-sm-inline">Refresh</span>
             </button>
             <a href="{{ route('campaigns.create') }}" class="btn btn-primary">
-                <i class="bi bi-plus-lg me-2"></i>New Campaign
+                <i class="bi bi-plus-lg me-2"></i><span class="d-none d-sm-inline">New Campaign</span>
             </a>
         </div>
     </div>
@@ -89,8 +89,8 @@
                             </span>
                         @endif
                     </div>
-                    <div class="stat-value">KSh {{ number_format($stats['local_balance'], 2) }}</div>
-                    <div class="stat-footer d-flex justify-content-between align-items-center">
+                    <div class="stat-value text-break">KSh {{ number_format($stats['local_balance'], 2) }}</div>
+                    <div class="stat-footer d-flex justify-content-between align-items-center flex-wrap">
                         <span class="text-muted">{{ number_format($stats['balance_units'], 2) }} units</span>
                         <a href="{{ route('wallet.topup') }}" class="btn btn-sm btn-success" onclick="event.stopPropagation()">
                             <i class="bi bi-plus-circle"></i> Top Up
@@ -107,20 +107,35 @@
                 </div>
                 <div class="stat-content">
                     <div class="stat-label d-flex justify-content-between align-items-center">
-                        <span>Onfon Balance</span>
-                        <button class="btn btn-sm btn-info" id="syncOnfonBtn" onclick="syncOnfonBalance()" title="Sync from Onfon">
-                            <i class="bi bi-arrow-clockwise"></i>
-                        </button>
-                    </div>
-                    <div class="stat-value" id="onfonBalanceValue">
-                        @if($stats['system_onfon_balance'] > 0)
-                            {{ number_format($stats['system_onfon_balance'], 2) }} units
+                        @if($isAdmin)
+                            <span>Onfon Balance</span>
+                            <button class="btn btn-sm btn-info" id="syncOnfonBtn" onclick="syncOnfonBalance()" title="Sync from Onfon">
+                                <i class="bi bi-arrow-clockwise"></i>
+                            </button>
                         @else
-                            <span class="text-muted" style="font-size: 1rem;">Loading...</span>
+                            <span>Bulk SMS Balance</span>
+                            <a href="{{ route('wallet.topup') }}" class="btn btn-sm btn-success" title="Top Up Balance">
+                                <i class="bi bi-plus-circle"></i>
+                            </a>
                         @endif
                     </div>
-                    <div class="stat-footer">
-                        <span class="text-muted" id="onfonLastSync">Onfon Credits Available</span>
+                    <div class="stat-value text-break" id="onfonBalanceValue">
+                        @if($isAdmin)
+                            @if($stats['system_onfon_balance'] > 0)
+                                {{ number_format($stats['system_onfon_balance'], 2) }} units
+                            @else
+                                <span class="text-muted" style="font-size: 1rem;">Loading...</span>
+                            @endif
+                        @else
+                            KSh {{ number_format($stats['local_balance'], 2) }}
+                        @endif
+                    </div>
+                    <div class="stat-footer d-flex justify-content-between align-items-center flex-wrap gap-1">
+                        @if($isAdmin)
+                            <span class="text-muted" id="onfonLastSync">Onfon Credits Available</span>
+                        @else
+                            <span class="text-muted">{{ number_format($stats['balance_units'], 2) }} units available</span>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -133,9 +148,9 @@
                 </div>
                 <div class="stat-content">
                     <div class="stat-label">Price Per Unit</div>
-                    <div class="stat-value">KSh {{ number_format($stats['price_per_unit'], 2) }}</div>
-                    <div class="stat-footer">
-                        <span class="text-muted">Per SMS unit</span>
+                    <div class="stat-value text-break">KSh {{ number_format($stats['price_per_unit'], 2) }}</div>
+                    <div class="stat-footer d-flex justify-content-between align-items-center flex-wrap">
+                        <span class="text-muted text-break">Per SMS unit</span>
                     </div>
                 </div>
             </div>
@@ -148,11 +163,101 @@
                 </div>
                 <div class="stat-content">
                     <div class="stat-label">Total Spent</div>
-                    <div class="stat-value">KSh {{ number_format($stats['total_cost'], 2) }}</div>
-                    <div class="stat-footer">
-                        <span class="text-muted">All time</span>
+                    <div class="stat-value text-break">KSh {{ number_format($stats['total_cost'], 2) }}</div>
+                    <div class="stat-footer d-flex justify-content-between align-items-center flex-wrap">
+                        <span class="text-muted text-break">All time</span>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    @if(!empty($businessMetrics['tenant']))
+    <div class="dashboard-card mb-4">
+        <div class="card-header-custom d-flex justify-content-between align-items-center">
+            <h5 class="card-title-custom mb-0">
+                <i class="bi bi-graph-up-arrow me-2"></i>Business KPIs
+            </h5>
+            <span class="text-muted small">Compared to previous month</span>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                @foreach($businessMetrics['tenant'] as $metric)
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="kpi-card h-100">
+                        <div class="kpi-card-header">
+                            <span class="kpi-label">{{ $metric['label'] }}</span>
+                            @if($metric['trend'])
+                                @php $direction = $metric['trend']['direction']; @endphp
+                                <span class="badge {{ $direction === 'up' ? 'bg-success-subtle text-success' : ($direction === 'down' ? 'bg-danger-subtle text-danger' : 'bg-secondary-subtle text-secondary') }}">
+                                    @if($direction === 'up')
+                                        <i class="bi bi-arrow-up-right me-1"></i>
+                                    @elseif($direction === 'down')
+                                        <i class="bi bi-arrow-down-right me-1"></i>
+                                    @else
+                                        <i class="bi bi-dash-lg me-1"></i>
+                                    @endif
+                                    {{ number_format($metric['trend']['percent'], 1) }}%
+                                </span>
+                            @endif
+                        </div>
+                        <div class="kpi-card-value">
+                            <span class="kpi-card-value-prefix">{{ $metric['prefix'] }}</span>
+                            {{ number_format($metric['value'], $metric['prefix'] ? 2 : 0) }}
+                            <span class="kpi-card-value-suffix">{{ $metric['suffix'] }}</span>
+                        </div>
+                        <div class="kpi-card-footer text-muted small">
+                            {{ $metric['description'] }}
+                        </div>
+                    </div>
+                </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
+    @endif
+
+    @if($isAdmin && !empty($businessMetrics['platform']))
+    <div class="dashboard-card mb-4">
+        <div class="card-header-custom d-flex justify-content-between align-items-center">
+            <h5 class="card-title-custom mb-0">
+                <i class="bi bi-speedometer2 me-2"></i>Platform KPIs
+            </h5>
+            <span class="text-muted small">Operator-wide performance</span>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                @foreach($businessMetrics['platform'] as $metric)
+                <div class="col-12 col-md-6 col-xl-3">
+                    <div class="kpi-card h-100">
+                        <div class="kpi-card-header">
+                            <span class="kpi-label">{{ $metric['label'] }}</span>
+                            @if($metric['trend'])
+                                @php $direction = $metric['trend']['direction']; @endphp
+                                <span class="badge {{ $direction === 'up' ? 'bg-success-subtle text-success' : ($direction === 'down' ? 'bg-danger-subtle text-danger' : 'bg-secondary-subtle text-secondary') }}">
+                                    @if($direction === 'up')
+                                        <i class="bi bi-arrow-up-right me-1"></i>
+                                    @elseif($direction === 'down')
+                                        <i class="bi bi-arrow-down-right me-1"></i>
+                                    @else
+                                        <i class="bi bi-dash-lg me-1"></i>
+                                    @endif
+                                    {{ number_format($metric['trend']['percent'], 1) }}%
+                                </span>
+                            @endif
+                        </div>
+                        <div class="kpi-card-value">
+                            <span class="kpi-card-value-prefix">{{ $metric['prefix'] }}</span>
+                            {{ number_format($metric['value'], $metric['prefix'] ? 2 : 0) }}
+                            <span class="kpi-card-value-suffix">{{ $metric['suffix'] }}</span>
+                        </div>
+                        <div class="kpi-card-footer text-muted small">
+                            {{ $metric['description'] }}
+                        </div>
+                    </div>
+                </div>
+                @endforeach
             </div>
         </div>
     </div>
@@ -167,9 +272,14 @@
                     <h5 class="card-title-custom mb-0">
                         <i class="bi bi-shield-check me-2"></i>Admin Overview
                     </h5>
-                    <a href="{{ route('admin.senders.index') }}" class="btn btn-sm btn-outline-primary">
-                        Manage Senders <i class="bi bi-arrow-right ms-1"></i>
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="{{ route('admin.admins.index') }}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-people me-1"></i>Manage Admins
+                        </a>
+                        <a href="{{ route('admin.senders.index') }}" class="btn btn-sm btn-outline-primary">
+                            Manage Senders <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -743,15 +853,18 @@
     }
 
     .stat-value {
-        font-size: 1.875rem;
+        font-size: clamp(1.45rem, 1.2vw + 1.2rem, 1.875rem);
         font-weight: 700;
         color: #1e293b;
         line-height: 1.2;
+        word-break: break-word;
+        hyphens: auto;
     }
 
     .stat-footer {
         margin-top: 0.5rem;
         font-size: 0.875rem;
+        word-break: break-word;
     }
 
     /* Dashboard Cards */
@@ -1468,8 +1581,9 @@
     updateTime();
     setInterval(updateTime, 1000);
 
-    // Onfon Balance Sync Function
+    // Onfon Balance Sync Function (Admin only)
     function syncOnfonBalance() {
+        @if($isAdmin)
         const btn = document.getElementById('syncOnfonBtn');
         const balanceValue = document.getElementById('onfonBalanceValue');
         const lastSync = document.getElementById('onfonLastSync');
@@ -1513,12 +1627,14 @@
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
         });
+        @endif
     }
 
-    // Auto-refresh Onfon balance every 30 seconds
+    // Auto-refresh Onfon balance every 30 seconds (Admin only)
     let balanceRefreshInterval = null;
     
     function startBalanceAutoRefresh() {
+        @if($isAdmin)
         // Clear any existing interval
         if (balanceRefreshInterval) {
             clearInterval(balanceRefreshInterval);
@@ -1528,10 +1644,12 @@
         balanceRefreshInterval = setInterval(() => {
             fetchOnfonBalanceQuietly();
         }, 30000); // 30 seconds
+        @endif
     }
 
-    // Fetch balance without showing loading or notifications
+    // Fetch balance without showing loading or notifications (Admin only)
     function fetchOnfonBalanceQuietly() {
+        @if($isAdmin)
         fetch('/api/onfon/balance/refresh', {
             method: 'POST',
             headers: {
@@ -1555,7 +1673,7 @@
                     
                     // Add pulse animation to show update
                     balanceValue.style.animation = 'pulse 0.5s ease-in-out';
-                    setTimeout(() => {
+        setTimeout(() => {
                         balanceValue.style.animation = '';
                     }, 500);
                 }
@@ -1564,16 +1682,19 @@
         .catch(error => {
             console.error('Auto-refresh error:', error);
         });
+        @endif
     }
 
-    // Start auto-refresh when page loads
+    // Start auto-refresh when page loads (Admin only)
     document.addEventListener('DOMContentLoaded', function() {
+        @if($isAdmin)
         startBalanceAutoRefresh();
         
         // Also fetch immediately on page load
         setTimeout(() => {
             fetchOnfonBalanceQuietly();
         }, 2000);
+        @endif
     });
 
     // Notification helper function
@@ -1646,4 +1767,137 @@
         }
     }
 </script>
+
+<style>
+/* Mobile Responsive Dashboard */
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 0.5rem;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .header-content {
+        width: 100%;
+    }
+    
+    .header-actions {
+        width: 100%;
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .header-actions .btn {
+        flex: 1;
+        min-width: 0;
+        font-size: 0.9rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .time-widget {
+        margin-bottom: 1rem;
+    }
+    
+    .time-widget-content {
+        padding: 1rem;
+    }
+    
+    .time-widget-value {
+        font-size: 1.5rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .stat-card {
+        padding: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.85rem;
+    }
+    
+    .activity-item {
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .activity-content {
+        font-size: 0.9rem;
+    }
+    
+    .activity-time {
+        font-size: 0.75rem;
+    }
+    
+    .recent-messages {
+        margin-top: 1rem;
+    }
+    
+    .message-item {
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .message-content {
+        font-size: 0.9rem;
+    }
+    
+    .message-meta {
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-container {
+        padding: 0.25rem;
+    }
+    
+    .page-title {
+        font-size: 1.5rem;
+    }
+    
+    .header-actions .btn {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.6rem;
+    }
+    
+    .time-widget-content {
+        padding: 0.75rem;
+    }
+    
+    .time-widget-value {
+        font-size: 1.25rem;
+    }
+    
+    .stat-card {
+        padding: 0.75rem;
+    }
+    
+    .stat-value {
+        font-size: 1.25rem;
+    }
+    
+    .activity-item,
+    .message-item {
+        padding: 0.5rem;
+    }
+    
+    .activity-content,
+    .message-content {
+        font-size: 0.85rem;
+    }
+}
+</style>
 @endsection

@@ -66,11 +66,25 @@ class CheckLowBalances extends Command
                             ->first();
 
                         if (!$recentNotification) {
+                            // Send Laravel notification (for email)
                             $user->notify(new LowBalanceNotification(
                                 $client,
                                 $client->balance,
                                 $setting->low_balance_threshold
                             ));
+
+                            // Also create custom notification (for in-app display)
+                            try {
+                                \App\Models\Notification::lowBalance(
+                                    $client->id,
+                                    $client->balance,
+                                    $setting->low_balance_threshold
+                                );
+                            } catch (\Exception $customNotifError) {
+                                Log::warning('Failed to create custom low balance notification', [
+                                    'error' => $customNotifError->getMessage()
+                                ]);
+                            }
 
                             $this->info("  ✓ Notified: {$user->email}");
                             $alertCount++;
