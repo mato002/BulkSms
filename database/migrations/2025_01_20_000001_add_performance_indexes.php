@@ -61,22 +61,24 @@ return new class extends Migration
             }
         });
 
-        // Indexes for api_logs table
-        Schema::table('api_logs', function (Blueprint $table) {
-            if (!$this->indexExists('api_logs', 'api_logs_client_id_index')) {
-                $table->index('client_id', 'api_logs_client_id_index');
-            }
-            if (!$this->indexExists('api_logs', 'api_logs_success_index')) {
-                $table->index('success', 'api_logs_success_index');
-            }
-            if (!$this->indexExists('api_logs', 'api_logs_created_at_index')) {
-                $table->index('created_at', 'api_logs_created_at_index');
-            }
-            // Composite for filtering
-            if (!$this->indexExists('api_logs', 'api_logs_client_created_index')) {
-                $table->index(['client_id', 'created_at'], 'api_logs_client_created_index');
-            }
-        });
+        // Indexes for api_logs table (only if table exists)
+        if (Schema::hasTable('api_logs')) {
+            Schema::table('api_logs', function (Blueprint $table) {
+                if (!$this->indexExists('api_logs', 'api_logs_client_id_index')) {
+                    $table->index('client_id', 'api_logs_client_id_index');
+                }
+                if (!$this->indexExists('api_logs', 'api_logs_success_index')) {
+                    $table->index('success', 'api_logs_success_index');
+                }
+                if (!$this->indexExists('api_logs', 'api_logs_created_at_index')) {
+                    $table->index('created_at', 'api_logs_created_at_index');
+                }
+                // Composite for filtering
+                if (!$this->indexExists('api_logs', 'api_logs_client_created_index')) {
+                    $table->index(['client_id', 'created_at'], 'api_logs_client_created_index');
+                }
+            });
+        }
 
         // Indexes for wallet_transactions table
         Schema::table('wallet_transactions', function (Blueprint $table) {
@@ -154,12 +156,14 @@ return new class extends Migration
             $table->dropIndex('campaigns_scheduled_at_index');
         });
 
-        Schema::table('api_logs', function (Blueprint $table) {
-            $table->dropIndex('api_logs_client_id_index');
-            $table->dropIndex('api_logs_success_index');
-            $table->dropIndex('api_logs_created_at_index');
-            $table->dropIndex('api_logs_client_created_index');
-        });
+        if (Schema::hasTable('api_logs')) {
+            Schema::table('api_logs', function (Blueprint $table) {
+                $table->dropIndex('api_logs_client_id_index');
+                $table->dropIndex('api_logs_success_index');
+                $table->dropIndex('api_logs_created_at_index');
+                $table->dropIndex('api_logs_client_created_index');
+            });
+        }
 
         Schema::table('wallet_transactions', function (Blueprint $table) {
             $table->dropIndex('wallet_transactions_client_id_index');

@@ -465,7 +465,25 @@
 
         .main-content {
             flex: 1;
-            padding: 2rem;
+            padding: 1.5rem clamp(0.5rem, 2vw, 1.5rem);
+        }
+
+        /* Ensure inner containers stretch full width */
+        .main-content .container,
+        .main-content .container-fluid,
+        .main-content .container-lg,
+        .main-content .container-xl,
+        .main-content .container-xxl {
+            max-width: 100%;
+            padding-left: clamp(0.5rem, 2vw, 1.5rem);
+            padding-right: clamp(0.5rem, 2vw, 1.5rem);
+            margin-left: 0;
+            margin-right: 0;
+        }
+
+        .modern-page-container {
+            padding-left: clamp(0.5rem, 2vw, 1.5rem);
+            padding-right: clamp(0.5rem, 2vw, 1.5rem);
         }
 
         /* Footer Styles */

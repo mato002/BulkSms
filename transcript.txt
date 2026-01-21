@@ -1,0 +1,51 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20251018001557
+Username: DESKTOP-VD9K2JR\DELL USER
+RunAs User: DESKTOP-VD9K2JR\DELL USER
+Configuration Name: 
+Machine: DESKTOP-VD9K2JR (Microsoft Windows NT 10.0.21996.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -noexit -command try { . "c:\Program Files\cursor\resources\app\out\vs\workbench\contrib\terminal\common\scripts\shellIntegration.ps1" } catch {}
+Process ID: 5720
+PSVersion: 5.1.21996.1
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.21996.1
+BuildVersion: 10.0.21996.1
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Transcript started, output file is transcript.txt
+
+PS>TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS C:\xampp\htdocs\bulk-sms-laravel> php artisan migrate
+
+PS C:\xampp\htdocs\bulk-sms-laravel> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS C:\xampp\htdocs\bulk-sms-laravel> php verify_tables.php
+
+PS C:\xampp\htdocs\bulk-sms-laravel> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS C:\xampp\htdocs\bulk-sms-laravel> php verify_tables.php > verify_output.txt 2>&1; Get-Content verify_output.txt
+PS C:\xampp\htdocs\bulk-sms-laravel> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS C:\xampp\htdocs\bulk-sms-laravel> php test_output.php; Get-Content direct_output.txt
+
+PHP is working!
+PS C:\xampp\htdocs\bulk-sms-laravel> php verify_tables.php; if (Test-Path verify_output.txt) { Get-Content verify_output.txt }
+
+PS C:\xampp\htdocs\bulk-sms-laravel> TerminatingError(): "The pipeline has been stopped."
+>> TerminatingError(): "The pipeline has been stopped."
+PS C:\xampp\htdocs\bulk-sms-laravel> php verify_tables.php
+
+PS C:\xampp\htdocs\bulk-sms-laravel> php verify_tables.php; Get-Content migration_verification.txt
+
+âœ— Error: SQLSTATE[HY000] [2002] No connection could be made because the target machine actively refused it
+PS C:\xampp\htdocs\bulk-sms-laravel> Start-Process "C:\xampp\xampp-control.exe"
+PS C:\xampp\htdocs\bulk-sms-laravel> net start mysql
+
+PS C:\xampp\htdocs\bulk-sms-laravel> & "C:\xampp\mysql\bin\mysqld.exe" --install; net start MySQL
+
+
