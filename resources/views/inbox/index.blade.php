@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('page_title', 'Inbox')
+
 @section('content')
 @include('components.modern-page-styles')
 
@@ -59,6 +61,7 @@
         </div>
     </div>
 
+    <x-list-results-frame>
     <!-- Filter Card -->
     <div class="modern-card">
         <div class="modern-card-header">
@@ -67,9 +70,9 @@
             </h3>
         </div>
         <div class="modern-card-body">
-            <form method="GET" action="{{ route('inbox.index') }}" class="modern-filter-form-inbox">
+            <form method="GET" action="{{ route('inbox.index') }}" class="modern-filter-form-inbox" data-auto-filter data-turbo-frame="main-content">
                 <div class="filter-group">
-                    <input type="text" class="modern-input" name="search" placeholder="Search conversations..." value="{{ request('search') }}">
+                    <input type="text" class="modern-input" name="search" data-auto-filter-search placeholder="Search conversations..." value="{{ request('search') }}">
                 </div>
                 <div class="filter-group">
                     <select class="modern-select" name="channel">
@@ -87,12 +90,11 @@
                         <option value="archived" {{ request('status') === 'archived' ? 'selected' : '' }}>📦 Archived</option>
                     </select>
                 </div>
+                <div class="filter-group">
+                    <x-per-page-select :current="request('per_page', 25)" class="modern-select" />
+                </div>
                 <div class="filter-actions">
-                    <button type="submit" class="btn-primary-modern">
-                        <i class="bi bi-search"></i>
-                        <span>Filter</span>
-                    </button>
-                    <a href="{{ route('inbox.index') }}" class="btn-secondary-modern">
+                    <a href="{{ route('inbox.index') }}" class="btn-secondary-modern" data-turbo-frame="main-content">
                         <i class="bi bi-x-circle"></i>
                         <span>Clear</span>
                     </a>
@@ -111,7 +113,7 @@
         <div class="modern-card-body p-0">
             <div class="conversation-list">
                 @forelse($conversations as $conv)
-                <a href="{{ route('inbox.show', $conv->id) }}" class="conversation-item {{ $conv->unread_count > 0 ? 'unread' : '' }}">
+                <a href="{{ route('inbox.show', $conv->id) }}" class="conversation-item {{ $conv->unread_count > 0 ? 'unread' : '' }}" data-turbo-frame="main-content" data-turbo-action="advance">
                     <div class="conversation-avatar">
                         {{ strtoupper(substr($conv->contact_name, 0, 1)) }}
                     </div>
@@ -165,12 +167,12 @@
                 @endforelse
             </div>
         </div>
-        @if($conversations->hasPages())
-        <div class="modern-card-footer">
-            {{ $conversations->appends(request()->query())->links('vendor.pagination.simple') }}
-        </div>
-        @endif
+        <x-list-pagination-footer
+            :paginator="$conversations"
+            :export-route="route('inbox.export', request()->query())"
+        />
     </div>
+    </x-list-results-frame>
 </div>
 
 <style>

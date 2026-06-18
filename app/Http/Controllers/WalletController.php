@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\WalletTransaction;
 use App\Services\MpesaService;
+use App\Support\ListFilters;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -30,10 +31,41 @@ class WalletController extends Controller
         }
         
         // Get transaction history with pagination
-        $perPage = $request->get('per_page', 20);
-        $transactions = WalletTransaction::where('client_id', $client->id)
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+        $query = WalletTransaction::where('client_id', $client->id);
+
+        if ($request->filled('search')) {
+            $search = '%' . $request->search . '%';
+            $query->where(function ($q) use ($search) {
+                $q->where('transaction_ref', 'like', $search)
+                    ->orWhere('description', 'like', $search)
+                    ->orWhere('external_reference', 'like', $search)
+                    ->orWhere('mpesa_receipt', 'like', $search);
+            });
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('date_from') || $request->filled('from_date')) {
+            $from = $request->get('from_date', $request->get('date_from'));
+            $query->whereDate('created_at', '>=', $from);
+        }
+
+        if ($request->filled('date_to') || $request->filled('to_date')) {
+            $to = $request->get('to_date', $request->get('date_to'));
+            $query->whereDate('created_at', '<=', $to);
+        }
+
+        $transactions = ListFilters::paginate(
+            $query->orderBy('created_at', 'desc'),
+            $request,
+            25
+        );
 
         // Get summary stats
         $stats = [
@@ -75,7 +107,7 @@ class WalletController extends Controller
     public function initiateTopup(Request $request)
     {
         $request->validate([
-            'amount' => 'required|numeric|min:100|max:50000',
+            'amount' => 'required|numeric|min:10|max:50000',
             'payment_method' => 'required|string|in:mpesa,manual',
             'phone_number' => 'required_if:payment_method,mpesa|string|regex:/^254[0-9]{9}$/',
         ]);

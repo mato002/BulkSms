@@ -434,6 +434,7 @@ class SearchController extends Controller
             $addPage('API Monitor', ['api', 'monitor', 'logs', 'api logs'], 'api-monitor.index', 'bi-code-square');
             $addPage('API Statistics', ['api stats', 'statistics', 'api statistics'], 'api-monitor.statistics', 'bi-graph-up-arrow');
             $addPage('Manage Senders', ['senders', 'sender', 'phone numbers'], 'admin.senders.index', 'bi-telephone');
+            $addPage('All Payments', ['payments', 'payment', 'transactions', 'topup'], 'admin.payments.index', 'bi-credit-card');
         }
 
         // Search through pages

@@ -7,8 +7,10 @@ use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\CampaignController;
 use App\Http\Controllers\Api\ClientController;
+use App\Http\Controllers\Api\TopupController;
 use App\Http\Controllers\Monitoring\HealthCheckController;
 use App\Http\Controllers\WebhookController;
+use App\Http\Controllers\MpesaWebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -113,7 +115,19 @@ Route::middleware(['auth:sanctum'])->group(function () {
 });
 
 // Payment webhooks (no auth - providers will call these)
-Route::post('/webhooks/mpesa/callback', [\App\Http\Controllers\PaymentController::class, 'handleMpesaCallback']);
+Route::prefix('mpesa')->group(function () {
+    Route::post('/stk/callback', [MpesaWebhookController::class, 'callback']);
+    Route::post('/c2b/confirm', [MpesaWebhookController::class, 'c2bConfirm']);
+    Route::post('/c2b/validate', [MpesaWebhookController::class, 'c2bValidate']);
+    Route::post('/b2c/result', [MpesaWebhookController::class, 'b2cResult']);
+    Route::post('/b2c/timeout', [MpesaWebhookController::class, 'b2cTimeout']);
+    Route::post('/reversal/result', [MpesaWebhookController::class, 'reversalResult']);
+    Route::post('/reversal/timeout', [MpesaWebhookController::class, 'reversalTimeout']);
+});
+
+// Legacy M-Pesa webhook paths (kept for backward compatibility)
+Route::post('/webhooks/mpesa/callback', [MpesaWebhookController::class, 'callback']);
+Route::post('/webhooks/mpesa/timeout', [MpesaWebhookController::class, 'timeout']);
 Route::post('/webhooks/stripe/webhook', [\App\Http\Controllers\PaymentController::class, 'handleStripeWebhook']);
 
 // Local test route (no auth) to validate send flow quickly
@@ -122,13 +136,14 @@ if (app()->environment('local')) {
         ->withoutMiddleware(['api.auth', 'company.auth']);
 }
 
-// Admin routes (for managing all companies)
-Route::middleware(['api.auth', 'admin'])->group(function () {
+// Admin routes (PRADY_TECH / client 1 API key)
+Route::middleware(['api.auth', 'admin.api'])->group(function () {
     Route::prefix('admin')->group(function () {
         Route::get('/clients', [ClientController::class, 'index']);
         Route::post('/clients', [ClientController::class, 'store']);
         Route::put('/clients/{id}', [ClientController::class, 'update']);
         Route::delete('/clients/{id}', [ClientController::class, 'destroy']);
         Route::get('/statistics', [ClientController::class, 'adminStatistics']);
+        Route::post('/clients/{id}/credit', [TopupController::class, 'creditClient']);
     });
 });

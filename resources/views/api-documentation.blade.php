@@ -660,7 +660,7 @@ axios.post('{{ config('app.url') }}/api/1/messages/send', {
                                 <td><code>amount</code></td>
                                 <td>number</td>
                                 <td><span class="badge required">Required</span></td>
-                                <td>Amount in KES (min: 100, max: 50000)</td>
+                                <td>Amount in KES (min: 10, max: 50000)</td>
                             </tr>
                             <tr>
                                 <td><code>payment_method</code></td>
@@ -725,6 +725,7 @@ axios.post('{{ config('app.url') }}/api/1/messages/send', {
   "amount": 1000.00,
   "payment_method": "mpesa",
   "mpesa_receipt": "PGH7X8Y9Z0",
+  "balance": 1049.00,
   "completed_at": "2025-10-09T14:35:00Z"
 }</pre>
                     </div>
@@ -736,6 +737,84 @@ axios.post('{{ config('app.url') }}/api/1/messages/send', {
                         <li><code>completed</code> - Payment successful, balance updated</li>
                         <li><code>failed</code> - Payment failed or cancelled</li>
                     </ul>
+                </div>
+
+                <!-- Admin: Credit client balance (provider billing) -->
+                <div class="endpoint">
+                    <h3>Credit Client Balance (Admin / Provider Billing)</h3>
+                    <div>
+                        <span class="method post">POST</span>
+                        <span class="url">/api/admin/clients/{client_id}/credit</span>
+                    </div>
+
+                    <div class="alert alert-warning" style="margin-top: 15px;">
+                        <strong>Admin only.</strong> Use the <strong>PRADY_TECH (client 1)</strong> API key.
+                        For partner systems (e.g. Gaitho) that collect payments locally and need SMS balance credited here.
+                    </div>
+
+                    <p style="margin-top: 15px;">Instantly adds funds to a sender's wallet. Updates the balance shown on Admin → Manage Senders.</p>
+
+                    <h4>Request Parameters</h4>
+                    <table class="param-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>amount</code></td>
+                                <td>number</td>
+                                <td><span class="badge required">Required</span></td>
+                                <td>Amount in KES to credit</td>
+                            </tr>
+                            <tr>
+                                <td><code>reference</code></td>
+                                <td>string</td>
+                                <td>Optional</td>
+                                <td>Unique payment reference (idempotent — same reference won't credit twice)</td>
+                            </tr>
+                            <tr>
+                                <td><code>description</code></td>
+                                <td>string</td>
+                                <td>Optional</td>
+                                <td>Notes for the transaction log</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h4>Example Request (credit Gaitho, client 3)</h4>
+                    <div class="code-block">
+<pre>curl -X POST {{ config('app.url') }}/api/admin/clients/3/credit \
+  -H "X-API-Key: YOUR_PRADY_TECH_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 500,
+    "reference": "GAITHO-PAYMENT-12345",
+    "description": "Top-up from Gaitho app"
+  }'</pre>
+                    </div>
+
+                    <h4>Example Response</h4>
+                    <div class="code-block">
+<pre>{
+  "status": "success",
+  "message": "Balance credited successfully",
+  "data": {
+    "client_id": 3,
+    "sender_id": "GAITHO_AGY",
+    "transaction_id": "TXN-20260601-ABC123",
+    "amount": 500,
+    "old_balance": 96.99,
+    "new_balance": 596.99,
+    "units": 994.98,
+    "duplicate": false
+  }
+}</pre>
+                    </div>
                 </div>
 
                 <!-- Transaction History -->

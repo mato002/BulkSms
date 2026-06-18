@@ -1,137 +1,16 @@
 @extends('layouts.app')
 
+@section('page_title', $conversation->contact_name)
+
 @section('content')
 @include('components.modern-page-styles')
 
 <div class="modern-page-container">
-    @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="bi bi-check-circle me-2"></i>{{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    @endif
-
-    <div class="chat-container">
-        <!-- Chat Header -->
-        <div class="chat-header">
-            <div class="chat-header-left">
-                <a href="{{ route('inbox.index') }}" class="btn-secondary-modern me-3">
-                    <i class="bi bi-arrow-left"></i>
-                    <span>Back</span>
-                </a>
-                <div class="chat-avatar">
-                    {{ strtoupper(substr($conversation->contact_name, 0, 1)) }}
-                </div>
-                <div class="chat-user-info">
-                    <h5 class="chat-user-name">{{ $conversation->contact_name }}</h5>
-                    <small class="chat-user-details">
-                        {{ $conversation->contact_phone }}
-                        @if($conversation->department)
-                            • {{ $conversation->department }}
-                        @endif
-                    </small>
-                </div>
-            </div>
-            <div class="chat-header-right">
-                <span class="badge-modern badge-{{ $conversation->channel }}">
-                    @if($conversation->channel === 'sms')
-                        <i class="bi bi-phone"></i>
-                    @elseif($conversation->channel === 'whatsapp')
-                        <i class="bi bi-whatsapp"></i>
-                    @else
-                        <i class="bi bi-envelope"></i>
-                    @endif
-                    {{ strtoupper($conversation->channel) }}
-                </span>
-                <div class="dropdown">
-                    <button class="btn-secondary-modern dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-three-dots-vertical"></i>
-                        <span>{{ ucfirst($conversation->status) }}</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li>
-                            <form action="{{ route('inbox.updateStatus', $conversation->id) }}" method="POST">
-                                @csrf
-                                <input type="hidden" name="status" value="open">
-                                <button type="submit" class="dropdown-item">
-                                    <i class="bi bi-clock me-2"></i>Mark as Open
-                                </button>
-                            </form>
-                        </li>
-                        <li>
-                            <form action="{{ route('inbox.updateStatus', $conversation->id) }}" method="POST">
-                                @csrf
-                                <input type="hidden" name="status" value="resolved">
-                                <button type="submit" class="dropdown-item">
-                                    <i class="bi bi-check-circle me-2"></i>Mark as Resolved
-                                </button>
-                            </form>
-                        </li>
-                        <li>
-                            <form action="{{ route('inbox.updateStatus', $conversation->id) }}" method="POST">
-                                @csrf
-                                <input type="hidden" name="status" value="archived">
-                                <button type="submit" class="dropdown-item">
-                                    <i class="bi bi-archive me-2"></i>Archive
-                                </button>
-                            </form>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Messages Area -->
-        <div class="chat-messages" id="messagesContainer">
-            @forelse($messages as $msg)
-                <div class="message-wrapper {{ $msg->direction === 'outbound' ? 'message-outbound' : 'message-inbound' }}">
-                    <div class="message-bubble {{ $msg->direction === 'outbound' ? 'bubble-outbound' : 'bubble-inbound' }}">
-                        <div class="message-body">{{ $msg->body }}</div>
-                        <div class="message-meta">
-                            {{ \Carbon\Carbon::parse($msg->created_at)->format('M d, Y H:i') }}
-                            @if($msg->direction === 'outbound')
-                                @if($msg->status === 'delivered')
-                                    <i class="bi bi-check-all ms-1" title="Delivered"></i>
-                                @elseif($msg->status === 'sent')
-                                    <i class="bi bi-check ms-1" title="Sent"></i>
-                                @elseif($msg->status === 'failed')
-                                    <i class="bi bi-exclamation-circle ms-1" title="Failed"></i>
-                                @endif
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            @empty
-                <div class="chat-empty">
-                    <i class="bi bi-chat-dots"></i>
-                    <p>No messages yet. Start the conversation!</p>
-                </div>
-            @endforelse
-        </div>
-
-        <!-- Reply Input -->
-        <div class="chat-footer">
-            <form action="{{ route('inbox.reply', $conversation->id) }}" method="POST" id="replyForm">
-                @csrf
-                <div class="reply-input-wrapper">
-                    <textarea class="reply-textarea" 
-                              name="message" 
-                              id="messageInput" 
-                              rows="2" 
-                              placeholder="Type your message..." 
-                              required></textarea>
-                    <button type="submit" class="btn-send">
-                        <i class="bi bi-send-fill"></i>
-                        <span>Send</span>
-                    </button>
-                </div>
-                <small class="reply-hint">
-                    <i class="bi bi-info-circle"></i>
-                    Press Enter to send, Shift+Enter for new line
-                </small>
-            </form>
-        </div>
-    </div>
+    <turbo-frame id="chat-panel"
+                 src="{{ route('inbox.panel', $conversation->id) }}"
+                 refresh="every 10s">
+        @include('inbox.partials.chat-panel-content', compact('conversation', 'messages'))
+    </turbo-frame>
 </div>
 
 <style>
@@ -471,55 +350,44 @@
 }
 </style>
 
-<script>
-// Auto-scroll to bottom on load
-document.addEventListener('DOMContentLoaded', function() {
-    const container = document.getElementById('messagesContainer');
-    if (container) {
-        container.scrollTop = container.scrollHeight;
-    }
-
-    // Restore draft from localStorage if available
+<script data-turbo-eval>
+function initInboxChat() {
     const messageInput = document.getElementById('messageInput');
-    const draftKey = 'inbox_draft_{{ $conversation->id }}';
-    const existingDraft = localStorage.getItem(draftKey);
-    if (messageInput && existingDraft && !messageInput.value) {
-        messageInput.value = existingDraft;
-    }
-});
+    const replyForm = document.getElementById('replyForm');
+    const conversationId = {{ $conversation->id }};
+    const draftKey = `inbox_draft_${conversationId}`;
 
-// Enter key to send (Shift+Enter for new line)
-document.getElementById('messageInput')?.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        document.getElementById('replyForm').submit();
-    }
-});
-
-// Persist draft to localStorage as user types
-document.getElementById('messageInput')?.addEventListener('input', function() {
-    const draftKey = 'inbox_draft_{{ $conversation->id }}';
-    localStorage.setItem(draftKey, this.value);
-});
-
-// Clear draft on successful submit
-document.getElementById('replyForm')?.addEventListener('submit', function() {
-    const draftKey = 'inbox_draft_{{ $conversation->id }}';
-    localStorage.removeItem(draftKey);
-});
-
-// Auto-refresh every 10 seconds for new messages
-(function() {
-    const REFRESH_INTERVAL_MS = 10000;
-    const messageInput = document.getElementById('messageInput');
-    setInterval(function() {
-        const isTyping = document.activeElement === messageInput;
-        const hasDraft = (messageInput?.value || '').trim().length > 0;
-        if (isTyping || hasDraft) {
-            return; // Skip refresh to avoid losing user's input
+    if (messageInput) {
+        const existingDraft = localStorage.getItem(draftKey);
+        if (existingDraft && !messageInput.value) {
+            messageInput.value = existingDraft;
         }
-        location.reload();
-    }, REFRESH_INTERVAL_MS);
-})();
+
+        messageInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                replyForm?.requestSubmit();
+            }
+        });
+
+        messageInput.addEventListener('input', function () {
+            localStorage.setItem(draftKey, this.value);
+        });
+    }
+
+    if (replyForm) {
+        replyForm.addEventListener('submit', function () {
+            localStorage.removeItem(draftKey);
+        });
+    }
+}
+
+document.addEventListener('bulksms:frame-load', function (event) {
+    if (event.detail.frame.id === 'chat-panel') {
+        initInboxChat();
+    }
+});
+
+initInboxChat();
 </script>
 @endsection

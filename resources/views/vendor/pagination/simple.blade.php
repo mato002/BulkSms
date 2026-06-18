@@ -1,3 +1,4 @@
+@php $turboFrame = $turboFrame ?? null; @endphp
 @if ($paginator->hasPages())
     <div class="simple-pagination">
         <div class="pagination-info">
@@ -12,14 +13,14 @@
                     <span>Previous</span>
                 </button>
             @else
-                <a href="{{ $paginator->previousPageUrl() }}" class="pagination-btn pagination-btn-enabled">
+                <a href="{{ $paginator->previousPageUrl() }}" class="pagination-btn pagination-btn-enabled" @if($turboFrame) data-turbo-frame="{{ $turboFrame }}" @endif>
                     <i class="bi bi-chevron-left"></i>
                     <span>Previous</span>
                 </a>
             @endif
 
             @if ($paginator->hasMorePages())
-                <a href="{{ $paginator->nextPageUrl() }}" class="pagination-btn pagination-btn-enabled">
+                <a href="{{ $paginator->nextPageUrl() }}" class="pagination-btn pagination-btn-enabled" @if($turboFrame) data-turbo-frame="{{ $turboFrame }}" @endif>
                     <span>Next</span>
                     <i class="bi bi-chevron-right"></i>
                 </a>

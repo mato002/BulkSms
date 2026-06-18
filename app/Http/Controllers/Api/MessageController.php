@@ -25,7 +25,17 @@ class MessageController extends Controller
                 'body' => ['required','string'],
                 'template_id' => ['nullable','integer','exists:templates,id'],
                 'metadata' => ['nullable','array'],
+                'append_reply_link' => ['nullable','boolean'],
+                'append_stop_footer' => ['nullable','boolean'],
             ]);
+
+            $metadata = $validated['metadata'] ?? [];
+            if (array_key_exists('append_reply_link', $validated)) {
+                $metadata['append_reply_link'] = $validated['append_reply_link'];
+            }
+            if (array_key_exists('append_stop_footer', $validated)) {
+                $metadata['append_stop_footer'] = $validated['append_stop_footer'];
+            }
 
             $outbound = new OutboundMessage(
                 clientId: (int) $validated['client_id'],
@@ -35,10 +45,12 @@ class MessageController extends Controller
                 subject: $validated['subject'] ?? null,
                 body: $validated['body'],
                 templateId: $validated['template_id'] ?? null,
-                metadata: $validated['metadata'] ?? [],
+                metadata: $metadata,
             );
 
             $message = $this->dispatcher->dispatch($outbound);
+
+            $client = \App\Models\Client::find($validated['client_id']);
 
             return response()->json([
                 'status' => 'success',
@@ -47,6 +59,9 @@ class MessageController extends Controller
                     'id' => $message->id,
                     'status' => $message->status,
                     'provider_message_id' => $message->provider_message_id,
+                    'cost' => (float) ($message->cost ?? 0),
+                    'segments' => $message->metadata['segments'] ?? null,
+                    'balance_remaining' => $client ? (float) $client->fresh()->balance : null,
                 ]
             ], 200);
             

@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('page_title', 'Contacts')
+
 @section('content')
 <div class="modern-page-container">
     <!-- Page Header -->
@@ -88,6 +90,7 @@
         </div>
     </div>
 
+    <x-list-results-frame>
     <!-- Stats Cards -->
     <div class="stats-grid mb-4">
         <div class="stat-card-modern">
@@ -136,19 +139,18 @@
             </h3>
         </div>
         <div class="modern-card-body">
-            <form method="GET" class="modern-filter-form">
+            <form method="GET" class="modern-filter-form" data-auto-filter data-turbo-frame="main-content">
                 <div class="filter-group">
-                    <input type="text" name="search" class="modern-input" value="{{ request('search') }}" placeholder="Search by name or phone...">
+                    <input type="text" name="search" class="modern-input" data-auto-filter-search value="{{ request('search') }}" placeholder="Search by name or phone...">
                 </div>
                 <div class="filter-group">
-                    <input type="text" name="department" class="modern-input" value="{{ request('department') }}" placeholder="Filter by department...">
+                    <input type="text" name="department" class="modern-input" data-auto-filter-search value="{{ request('department') }}" placeholder="Filter by department...">
+                </div>
+                <div class="filter-group">
+                    <x-per-page-select :current="request('per_page', 25)" class="modern-select" />
                 </div>
                 <div class="filter-actions">
-                    <button class="btn-primary-modern" type="submit">
-                        <i class="bi bi-search"></i>
-                        <span>Search</span>
-                    </button>
-                    <a href="{{ route('contacts.index') }}" class="btn-secondary-modern">
+                    <a href="{{ route('contacts.index') }}" class="btn-secondary-modern" data-turbo-frame="main-content">
                         <i class="bi bi-x-circle"></i>
                         <span>Clear</span>
                     </a>
@@ -259,19 +261,19 @@
                 </table>
             </div>
         </div>
-        @if($contacts->hasPages())
-        <div class="modern-card-footer">
-            {{ $contacts->appends(request()->query())->links('vendor.pagination.simple') }}
-        </div>
-        @endif
+        <x-list-pagination-footer
+            :paginator="$contacts"
+            :export-route="route('contacts.export', request()->query())"
+        />
     </div>
+    </x-list-results-frame>
 </div>
 
 <!-- Import CSV Modal -->
 <div class="modal fade" id="importModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form action="{{ route('contacts.import') }}" method="POST" enctype="multipart/form-data">
+            <form action="{{ route('contacts.import') }}" method="POST" enctype="multipart/form-data" data-turbo="false">
                 @csrf
                 <div class="modal-header">
                     <h5 class="modal-title">Import Contacts from CSV</h5>
@@ -845,14 +847,17 @@
 }
 </style>
 
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function () {
+<script data-turbo-eval>
+function initContactsBulkActions() {
+    const bulkForm = document.getElementById('bulkActionForm');
+    if (!bulkForm) {
+        return;
+    }
+
     const selectAll = document.getElementById('selectAllContacts');
-    const checkboxNodes = document.querySelectorAll('.contact-checkbox');
+    const checkboxNodes = document.querySelectorAll('#list-results .contact-checkbox, .list-results-region .contact-checkbox');
     const toolbar = document.getElementById('bulkActionToolbar');
     const overlay = document.getElementById('bulkActionOverlay');
-    const bulkForm = document.getElementById('bulkActionForm');
     const bulkActionInput = document.getElementById('bulkActionInput');
     const bulkTagInput = document.getElementById('bulkTagInput');
     const tagSelect = document.getElementById('bulkTagSelect');
@@ -861,11 +866,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const clearBtn = document.getElementById('clearSelectionBtn');
     const selectedCountEl = document.getElementById('selectedCount');
 
-    if (!bulkForm) {
-        return;
-    }
-
-    const selectedIds = new Set();
+    const selectedIds = window.__contactsSelectedIds = window.__contactsSelectedIds || new Set();
 
     function updateToolbarVisibility() {
         if (!toolbar) {
@@ -924,25 +925,35 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     checkboxNodes.forEach(checkbox => {
+        if (checkbox.dataset.bound === 'true') {
+            return;
+        }
+        checkbox.dataset.bound = 'true';
         checkbox.addEventListener('change', () => toggleSelection(checkbox));
     });
 
-    selectAll?.addEventListener('change', function () {
-        const shouldSelect = this.checked;
-        checkboxNodes.forEach(cb => {
-            cb.checked = shouldSelect;
-            const contactId = cb.dataset.contactId;
-            if (!contactId) {
-                return;
-            }
-            if (shouldSelect) {
-                selectedIds.add(contactId);
-            } else {
-                selectedIds.delete(contactId);
-            }
+    if (selectAll && selectAll.dataset.bound !== 'true') {
+        selectAll.dataset.bound = 'true';
+        selectAll.addEventListener('change', function () {
+            const shouldSelect = this.checked;
+            document.querySelectorAll('#list-results .contact-checkbox, .list-results-region .contact-checkbox').forEach(cb => {
+                cb.checked = shouldSelect;
+                const contactId = cb.dataset.contactId;
+                if (!contactId) {
+                    return;
+                }
+                if (shouldSelect) {
+                    selectedIds.add(contactId);
+                } else {
+                    selectedIds.delete(contactId);
+                }
+            });
+            updateToolbarVisibility();
         });
-        updateToolbarVisibility();
-    });
+    }
+
+    if (!bulkForm.dataset.toolbarBound) {
+        bulkForm.dataset.toolbarBound = 'true';
 
     tagSelect?.addEventListener('change', () => {
         if (applyTagBtn) {
@@ -1022,8 +1033,16 @@ document.addEventListener('DOMContentLoaded', function () {
     deleteBtn?.addEventListener('click', function () {
         submitBulkAction('delete');
     });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initContactsBulkActions);
+document.addEventListener('bulksms:frame-load', function (event) {
+    if (event.detail.frame.id === 'main-content') {
+        window.__contactsSelectedIds?.clear();
+        initContactsBulkActions();
+    }
 });
 </script>
-@endpush
 
 @endsection

@@ -1,25 +1,9 @@
 @extends('layouts.app')
 
+@section('page_title', 'All Messages')
+
 @section('content')
 <div class="modern-page-container">
-    <!-- Debug Info (Remove this section once you confirm everything works) -->
-    @if(isset($debugInfo))
-    <div class="alert alert-info mb-4" style="background: #e3f2fd; border: 1px solid #2196f3; border-radius: 8px; padding: 1rem;">
-        <h5 style="margin: 0 0 0.5rem 0; color: #1976d2;">🔍 Debug Info - Senders Found</h5>
-        <p style="margin: 0;"><strong>Total Senders:</strong> {{ $debugInfo['total_senders_found'] }}</p>
-        <p style="margin: 0.5rem 0 0 0;"><strong>Senders List:</strong> 
-            @if(count($debugInfo['senders_list']) > 0)
-                <span style="color: #1976d2; font-weight: 600;">
-                    {{ implode(', ', $debugInfo['senders_list']) }}
-                </span>
-            @else
-                <span style="color: #d32f2f;">No senders found - This means no messages have sender field populated</span>
-            @endif
-        </p>
-        <p style="margin: 0.5rem 0 0 0;"><strong>Analytics Cards:</strong> {{ $debugInfo['analytics_count'] }} sender(s) will be displayed below</p>
-    </div>
-    @endif
-
     <!-- Page Header -->
     <div class="modern-page-header">
         <div class="page-header-content">
@@ -166,6 +150,7 @@
     </div>
     @endif
 
+    <x-list-results-frame>
     <!-- Filter Card -->
     <div class="modern-card">
         <div class="modern-card-header">
@@ -174,11 +159,11 @@
             </h3>
         </div>
         <div class="modern-card-body">
-            <form method="GET" action="{{ route('messages.all') }}" class="modern-filter-form">
+            <form method="GET" action="{{ route('messages.all') }}" class="modern-filter-form" data-auto-filter data-turbo-frame="main-content">
                 <div class="filter-row">
                     <div class="filter-group">
                         <label class="filter-label">Search</label>
-                        <input type="text" class="modern-input" name="search" placeholder="Recipient, body, or sender..." value="{{ request('search') }}">
+                        <input type="text" class="modern-input" name="search" data-auto-filter-search placeholder="Recipient, body, or sender..." value="{{ request('search') }}">
                     </div>
                     <div class="filter-group">
                         <label class="filter-label">Sender</label>
@@ -219,15 +204,13 @@
                         <label class="filter-label">Date To</label>
                         <input type="date" class="modern-input" name="date_to" value="{{ request('date_to') }}">
                     </div>
-                    <div class="filter-group"></div>
-                    <div class="filter-group"></div>
+                    <div class="filter-group">
+                        <label class="filter-label">Per page</label>
+                        <x-per-page-select :current="request('per_page', 25)" class="modern-select" />
+                    </div>
                 </div>
                 <div class="filter-actions">
-                    <button type="submit" class="btn-primary-modern">
-                        <i class="bi bi-search"></i>
-                        <span>Apply Filters</span>
-                    </button>
-                    <a href="{{ route('messages.all') }}" class="btn-secondary-modern">
+                    <a href="{{ route('messages.all') }}" class="btn-secondary-modern" data-turbo-frame="main-content">
                         <i class="bi bi-x-circle"></i>
                         <span>Clear All</span>
                     </a>
@@ -259,6 +242,7 @@
                             <th>Status</th>
                             <th>Cost</th>
                             <th>Sent At</th>
+                            <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -317,10 +301,16 @@
                                     {{ \Carbon\Carbon::parse($message->created_at)->format('M d, Y H:i') }}
                                 @endif
                             </td>
+                            <td class="text-end">
+                                <a href="{{ route('messages.show', ['message' => $message->id, 'return' => url()->full()]) }}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> View
+                                </a>
+                            </td>
                         </tr>
                         @empty
-                        <tr>
-                            <td colspan="8" class="text-center py-5">
+                            <tr>
+                                <td colspan="9" class="text-center py-5">
                                 <div class="empty-state">
                                     <i class="bi bi-envelope-x"></i>
                                     <h4>No Messages Found</h4>
@@ -333,12 +323,12 @@
                 </table>
             </div>
         </div>
-        @if($messages->hasPages())
-        <div class="modern-card-footer">
-            {{ $messages->links('vendor.pagination.simple') }}
-        </div>
-        @endif
+        <x-list-pagination-footer
+            :paginator="$messages"
+            :export-route="route('messages.all.export', request()->query())"
+        />
     </div>
+    </x-list-results-frame>
 </div>
 
 <style>

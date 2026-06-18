@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('page_title', 'API Monitor')
+
 @section('content')
 <div class="container-fluid mt-4">
     <!-- Header -->
@@ -9,7 +11,7 @@
             <p class="text-muted">Real-time monitoring of API requests and performance</p>
         </div>
         <div>
-            <button class="btn btn-primary" onclick="refreshData()">
+            <button class="btn btn-primary" onclick="refreshApiMonitorList()">
                 <i class="fas fa-sync-alt"></i> Refresh
             </button>
             <a href="{{ route('api-monitor.statistics') }}" class="btn btn-info">
@@ -92,13 +94,14 @@
         </div>
     </div>
 
+    <x-list-results-frame>
     <!-- Filters -->
     <div class="card mb-4">
         <div class="card-header">
             <i class="fas fa-filter"></i> Filters
         </div>
         <div class="card-body">
-            <form method="GET" action="{{ route('api-monitor.index') }}" class="row g-3">
+            <form method="GET" action="{{ route('api-monitor.index') }}" class="row g-3" data-auto-filter data-turbo-frame="main-content">
                 <div class="col-md-3">
                     <label class="form-label">Client</label>
                     <select name="client_id" class="form-select">
@@ -141,11 +144,13 @@
                     <input type="date" name="date_to" class="form-control" value="{{ request('date_to') }}">
                 </div>
 
-                <div class="col-md-1">
-                    <label class="form-label">&nbsp;</label>
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="fas fa-search"></i>
-                    </button>
+                <div class="col-md-2">
+                    <label class="form-label">Per page</label>
+                    <x-per-page-select :current="request('per_page', 25)" class="form-select" />
+                </div>
+
+                <div class="col-md-2 d-flex align-items-end">
+                    <a href="{{ route('api-monitor.index') }}" class="btn btn-outline-secondary w-100" data-turbo-frame="main-content">Clear</a>
                 </div>
             </form>
         </div>
@@ -244,19 +249,22 @@
                 </table>
             </div>
         </div>
-        <div class="card-footer">
-            {{ $logs->links('vendor.pagination.simple') }}
-        </div>
+        <x-list-pagination-footer
+            :paginator="$logs"
+            :export-route="route('api-monitor.export', request()->query())"
+        />
     </div>
+    </x-list-results-frame>
 </div>
 
-<script>
-function refreshData() {
-    location.reload();
+<script data-turbo-eval>
+function refreshApiMonitorList() {
+    const frame = document.getElementById('main-content');
+    if (frame) {
+        frame.reload();
+    }
 }
-
-// Auto-refresh every 30 seconds
-setInterval(refreshData, 30000);
+window.refreshData = refreshApiMonitorList;
 </script>
 
 <style>

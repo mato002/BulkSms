@@ -178,7 +178,7 @@
                     <div class="row mb-4" id="custom-amount" style="display: none;">
                         <div class="col-md-6">
                             <label for="custom_amount" class="form-label">Enter Custom Amount (KES)</label>
-                            <input type="number" class="form-control" id="custom_amount" min="100" max="1000000" step="100">
+                            <input type="number" class="form-control" id="custom_amount" min="10" max="1000000" step="1">
                         </div>
                     </div>
 

@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('page_title', 'Sender Management')
+
 @section('content')
 <div class="container-fluid">
     <!-- Page Header -->
@@ -80,18 +82,20 @@
         </div>
     </div>
 
+    <x-list-results-frame>
     <!-- Search and Filter -->
     <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <form method="GET" action="{{ route('admin.senders.index') }}" class="row g-3">
+            <form method="GET" action="{{ route('admin.senders.index') }}" class="row g-3" data-auto-filter data-turbo-frame="main-content">
                 <div class="col-md-5">
                     <input type="text" 
                            name="search" 
+                           data-auto-filter-search
                            value="{{ request('search') }}"
                            placeholder="Search by name, contact, sender ID, or API key..."
                            class="form-control">
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <select name="status" class="form-select">
                         <option value="">All Status</option>
                         <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Active</option>
@@ -99,13 +103,11 @@
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-search me-1"></i>Search
-                    </button>
+                    <x-per-page-select :current="request('per_page', 25)" class="form-select" />
                 </div>
-                @if(request('search') || request('status') !== null)
+                @if(request('search') || request('status') !== null && request('status') !== '')
                     <div class="col-md-2">
-                        <a href="{{ route('admin.senders.index') }}" class="btn btn-outline-secondary w-100">
+                        <a href="{{ route('admin.senders.index') }}" class="btn btn-outline-secondary w-100" data-turbo-frame="main-content">
                             <i class="bi bi-x-lg me-1"></i>Clear
                         </a>
                     </div>
@@ -188,7 +190,7 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <div>{{ $client->campaigns_count }} campaigns</div>
-                                    <div class="text-muted small">{{ $client->sms_count }} messages</div>
+                                    <div class="text-muted small">{{ number_format($client->messages_count) }} messages</div>
                                 </td>
                                 <td class="px-4 py-3">
                                     @if($client->status)
@@ -243,20 +245,16 @@
                 </table>
             </div>
 
-            <!-- Pagination -->
-            @if($clients->hasPages())
-                <div class="card-footer bg-light">
-                    <div class="d-flex justify-content-center">
-                        {{ $clients->links('vendor.pagination.simple') }}
-                    </div>
-                </div>
-            @endif
+            <x-list-pagination-footer
+                :paginator="$clients"
+                :export-route="route('admin.senders.export', request()->query())"
+            />
         </div>
     </div>
+    </x-list-results-frame>
 </div>
 
-@push('scripts')
-<script>
+<script data-turbo-eval>
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text).then(function() {
         // Bootstrap toast notification
@@ -282,5 +280,4 @@ function copyToClipboard(text) {
     });
 }
 </script>
-@endpush
 @endsection

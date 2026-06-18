@@ -84,11 +84,66 @@
                             </div>
 
                             <div class="col-md-6 mb-3">
+                                <label for="price_per_unit" class="form-label">Price Per Unit (KSH)</label>
+                                <input type="number"
+                                       name="price_per_unit"
+                                       id="price_per_unit"
+                                       value="{{ old('price_per_unit', $client->price_per_unit ?? 1.00) }}"
+                                       step="0.01"
+                                       min="0.01"
+                                       class="form-control @error('price_per_unit') is-invalid @enderror">
+                                <div class="form-text">Cost charged per SMS unit (e.g. 0.60 for Gaitho)</div>
+                                @error('price_per_unit')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
                                 <label for="status" class="form-label">Status</label>
                                 <select name="status" id="status" class="form-select">
                                     <option value="1" {{ old('status', $client->status) == 1 ? 'selected' : '' }}>Active</option>
                                     <option value="0" {{ old('status', $client->status) == 0 ? 'selected' : '' }}>Inactive</option>
                                 </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <input type="hidden" name="append_reply_link" value="0">
+                            <div class="form-check form-switch">
+                                <input type="checkbox"
+                                       class="form-check-input"
+                                       name="append_reply_link"
+                                       id="append_reply_link"
+                                       value="1"
+                                       {{ old('append_reply_link', $client->settings['append_reply_link'] ?? false) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="append_reply_link">
+                                    Append SMS reply link
+                                </label>
+                            </div>
+                            <div class="form-text">
+                                When enabled, outbound SMS includes a short reply URL ({{ config('app.url') }}/x/...).
+                                Disable for clients that include their own links (e.g. Gaitho).
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <input type="hidden" name="append_stop_footer" value="0">
+                            <div class="form-check form-switch">
+                                <input type="checkbox"
+                                       class="form-check-input"
+                                       name="append_stop_footer"
+                                       id="append_stop_footer"
+                                       value="1"
+                                       {{ old('append_stop_footer', $client->settings['append_stop_footer'] ?? false) ? 'checked' : '' }}>
+                                <label class="form-check-label" for="append_stop_footer">
+                                    Append STOP opt-out footer
+                                </label>
+                            </div>
+                            <div class="form-text">
+                                When enabled, adds <code>STOP *456*9*5#</code> to outbound SMS.
+                                Disable if the client already includes it in their templates (e.g. Gaitho).
                             </div>
                         </div>
 

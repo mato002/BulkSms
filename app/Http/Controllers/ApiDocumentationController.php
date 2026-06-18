@@ -231,7 +231,7 @@ class ApiDocumentationController extends Controller
                         'name' => 'Initiate Top-up',
                         'description' => 'Initiate M-Pesa top-up',
                         'parameters' => [
-                            ['name' => 'amount', 'type' => 'number', 'required' => true, 'description' => 'Amount in KES (min: 100)'],
+                            ['name' => 'amount', 'type' => 'number', 'required' => true, 'description' => 'Amount in KES (min: 10)'],
                             ['name' => 'payment_method', 'type' => 'string', 'required' => true, 'description' => 'mpesa or manual'],
                             ['name' => 'phone_number', 'type' => 'string', 'required' => true, 'description' => 'M-Pesa phone (254XXXXXXXXX)'],
                         ],

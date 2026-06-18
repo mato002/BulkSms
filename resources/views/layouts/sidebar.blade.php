@@ -1,16 +1,17 @@
 @php
     $isMainMenuActive = request()->routeIs('dashboard') || request()->routeIs('inbox.*') || request()->routeIs('contacts.*') || request()->routeIs('tags.*') || request()->routeIs('templates.*') || request()->routeIs('campaigns.*') || request()->routeIs('messages.*');
+    $turboNav = 'data-turbo-frame="main-content" data-turbo-action="advance"';
 @endphp
 <div class="nav-section-header" data-bs-toggle="collapse" data-bs-target="#mainMenuCollapse" aria-expanded="{{ $isMainMenuActive ? 'true' : 'false' }}">
     <span>Main Menu</span>
     <i class="bi bi-chevron-down collapse-icon"></i>
 </div>
 <div class="collapse {{ $isMainMenuActive ? 'show' : '' }}" id="mainMenuCollapse">
-    <a href="{{ route('dashboard') }}" class="sidebar-nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="Dashboard">
+    <a href="{{ route('dashboard') }}" class="sidebar-nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="Dashboard">
         <i class="bi bi-speedometer2"></i>
         <span>Dashboard</span>
     </a>
-    <a href="{{ route('inbox.index') }}" class="sidebar-nav-item {{ request()->routeIs('inbox.*') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="Inbox">
+    <a href="{{ route('inbox.index') }}" class="sidebar-nav-item {{ request()->routeIs('inbox.*') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="Inbox">
         <i class="bi bi-inbox-fill"></i>
         <span>Inbox</span>
         @php
@@ -20,11 +21,11 @@
             <span class="badge bg-danger ms-auto">{{ $unreadCount }}</span>
         @endif
     </a>
-    <a href="{{ route('contacts.index') }}" class="sidebar-nav-item {{ request()->routeIs('contacts.*') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="Contacts">
+    <a href="{{ route('contacts.index') }}" class="sidebar-nav-item {{ request()->routeIs('contacts.*') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="Contacts">
         <i class="bi bi-people"></i>
         <span>Contacts</span>
     </a>
-    <a href="{{ route('tags.index') }}" class="sidebar-nav-item {{ request()->routeIs('tags.*') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="Tags">
+    <a href="{{ route('tags.index') }}" class="sidebar-nav-item {{ request()->routeIs('tags.*') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="Tags">
         <i class="bi bi-tags"></i>
         <span>Tags</span>
         @php
@@ -34,15 +35,15 @@
             <span class="badge bg-info ms-auto">{{ $tagCount }}</span>
         @endif
     </a>
-    <a href="{{ route('templates.index') }}" class="sidebar-nav-item {{ request()->routeIs('templates.*') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="Templates">
+    <a href="{{ route('templates.index') }}" class="sidebar-nav-item {{ request()->routeIs('templates.*') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="Templates">
         <i class="bi bi-file-text"></i>
         <span>Templates</span>
     </a>
-    <a href="{{ route('campaigns.index') }}" class="sidebar-nav-item {{ request()->routeIs('campaigns.*') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="Campaigns">
+    <a href="{{ route('campaigns.index') }}" class="sidebar-nav-item {{ request()->routeIs('campaigns.*') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="Campaigns">
         <i class="bi bi-megaphone"></i>
         <span>Campaigns</span>
     </a>
-    <a href="{{ route('messages.index') }}" class="sidebar-nav-item {{ request()->routeIs('messages.*') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="Messages">
+    <a href="{{ route('messages.index') }}" class="sidebar-nav-item {{ request()->routeIs('messages.*') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="Messages">
         <i class="bi bi-envelope"></i>
         <span>Messages</span>
     </a>
@@ -97,7 +98,7 @@
 </div>
 <div class="collapse {{ $isChannelsActive ? 'show' : '' }}" id="channelsCollapse">
     @foreach($channelMenuItems as $name => $item)
-        <a href="{{ $item['route'] }}" class="sidebar-nav-item {{ $item['is_current'] ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="{{ $item['label'] }}">
+        <a href="{{ $item['route'] }}" class="sidebar-nav-item {{ $item['is_current'] ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="{{ $item['label'] }}">
             <i class="bi {{ $item['icon'] }}"></i>
             <span>{{ $item['label'] }}</span>
             @if(!$item['exists'])
@@ -114,11 +115,11 @@
     <i class="bi bi-chevron-down collapse-icon"></i>
 </div>
 <div class="collapse {{ $isDeveloperActive ? 'show' : '' }}" id="developerCollapse">
-    <a href="{{ route('api.docs') }}" class="sidebar-nav-item {{ request()->routeIs('api.docs') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="API Documentation">
+    <a href="{{ route('api.docs') }}" class="sidebar-nav-item {{ request()->routeIs('api.docs') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="API Documentation">
         <i class="bi bi-code-square"></i>
         <span>API Documentation</span>
     </a>
-    <a href="{{ route('api-monitor.index') }}" class="sidebar-nav-item {{ request()->routeIs('api-monitor.*') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="API Monitor">
+    <a href="{{ route('api-monitor.index') }}" class="sidebar-nav-item {{ request()->routeIs('api-monitor.*') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="API Monitor">
         <i class="bi bi-activity"></i>
         <span>API Monitor</span>
         @php
@@ -136,7 +137,7 @@
     <i class="bi bi-chevron-down collapse-icon"></i>
 </div>
 <div class="collapse {{ $isSystemActive ? 'show' : '' }}" id="systemCollapse">
-    <a href="{{ route('wallet.index') }}" class="sidebar-nav-item {{ request()->routeIs('wallet.*') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="Wallet">
+    <a href="{{ route('wallet.index') }}" class="sidebar-nav-item {{ request()->routeIs('wallet.*') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="Wallet">
         <i class="bi bi-wallet2"></i>
         <span>Wallet</span>
         @if(Auth::check() && Auth::user()->balance < 100)
@@ -145,15 +146,15 @@
             </span>
         @endif
     </a>
-    <a href="{{ route('analytics.index') }}" class="sidebar-nav-item {{ request()->routeIs('analytics.*') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="Analytics">
+    <a href="{{ route('analytics.index') }}" class="sidebar-nav-item {{ request()->routeIs('analytics.*') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="Analytics">
         <i class="bi bi-bar-chart"></i>
         <span>Analytics</span>
     </a>
-    <a href="{{ route('settings.index') }}" class="sidebar-nav-item {{ request()->routeIs('settings.index') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="Settings">
+    <a href="{{ route('settings.index') }}" class="sidebar-nav-item {{ request()->routeIs('settings.index') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="Settings">
         <i class="bi bi-gear"></i>
         <span>Settings</span>
     </a>
-    <a href="{{ route('notifications.index') }}" class="sidebar-nav-item {{ request()->routeIs('notifications.*') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="Notifications">
+    <a href="{{ route('notifications.index') }}" class="sidebar-nav-item {{ request()->routeIs('notifications.*') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="Notifications">
         <i class="bi bi-bell"></i>
         <span>Notifications</span>
         @php
@@ -168,21 +169,24 @@
 
 @if(Auth::check() && Auth::user()->isAdmin())
 @php
-    $isAdminActive = request()->routeIs('admin.admins.*') || request()->routeIs('admin.senders.*');
+    $isAdminActive = request()->routeIs('admin.admins.*') || request()->routeIs('admin.senders.*') || request()->routeIs('admin.payments.*');
 @endphp
 <div class="nav-section-header mt-4" data-bs-toggle="collapse" data-bs-target="#adminCollapse" aria-expanded="{{ $isAdminActive ? 'true' : 'false' }}">
     <span>Admin</span>
     <i class="bi bi-chevron-down collapse-icon"></i>
 </div>
 <div class="collapse {{ $isAdminActive ? 'show' : '' }}" id="adminCollapse">
-    <a href="{{ route('admin.admins.index') }}" class="sidebar-nav-item {{ request()->routeIs('admin.admins.*') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="Manage Admins">
+    <a href="{{ route('admin.admins.index') }}" class="sidebar-nav-item {{ request()->routeIs('admin.admins.*') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="Manage Admins">
         <i class="bi bi-people"></i>
         <span>Manage Admins</span>
     </a>
-    <a href="{{ route('admin.senders.index') }}" class="sidebar-nav-item {{ request()->routeIs('admin.senders.*') ? 'active' : '' }}" data-bs-toggle="tooltip" data-bs-placement="right" title="Manage Senders">
+    <a href="{{ route('admin.senders.index') }}" class="sidebar-nav-item {{ request()->routeIs('admin.senders.*') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="Manage Senders">
         <i class="bi bi-building"></i>
         <span>Manage Senders</span>
     </a>
+    <a href="{{ route('admin.payments.index') }}" class="sidebar-nav-item {{ request()->routeIs('admin.payments.*') ? 'active' : '' }}" {!! $turboNav !!} data-bs-toggle="tooltip" data-bs-placement="right" title="All Payments">
+        <i class="bi bi-credit-card"></i>
+        <span>All Payments</span>
+    </a>
 </div>
 @endif
-

@@ -8,7 +8,9 @@ use App\Models\Contact;
 use App\Models\Message;
 use App\Services\Messaging\Contracts\MessageSender;
 use App\Services\Messaging\DTO\OutboundMessage;
-use App\Services\UrlShortenerService;
+use App\Services\SmsOutboundFormatter;
+use App\Services\SmsSegmenter;
+use App\Services\WalletCreditService;
 use App\Services\CredentialEncryptionService;
 use Illuminate\Contracts\Encryption\Encrypter;
 use Illuminate\Support\Arr;
@@ -52,6 +54,8 @@ class MessageDispatcher
         ]);
 
         return DB::transaction(function () use ($outbound, $provider, $sender) {
+            $client = Client::lockForUpdate()->findOrFail($outbound->clientId);
+
             $message = new Message();
             $message->client_id = $outbound->clientId;
             $message->template_id = $outbound->templateId;
@@ -67,21 +71,17 @@ class MessageDispatcher
             $message->is_read = true; // Outbound messages are already "read" by sender
             $message->save();
 
-            // Generate reply link and append to message body for SMS
             $messageBody = $outbound->body;
+            $outboundWithLink = $outbound;
+
             if ($outbound->channel === 'sms') {
-                // Use URL shortener service to create a short link
-                $urlShortener = app(UrlShortenerService::class);
-                $shortUrl = $urlShortener->createShortLink($message->id);
-                
-                // Append short URL to message
-                $messageBody .= "\n\nReply: {$shortUrl}";
-                
-                // Update the message body with the reply link
-                $message->body = $messageBody;
-                $message->save();
-                
-                // Create new OutboundMessage with updated body
+                $messageBody = app(SmsOutboundFormatter::class)->format($client, $outbound, $message->id);
+
+                if ($messageBody !== $outbound->body) {
+                    $message->body = $messageBody;
+                    $message->save();
+                }
+
                 $outboundWithLink = new OutboundMessage(
                     clientId: $outbound->clientId,
                     channel: $outbound->channel,
@@ -92,8 +92,26 @@ class MessageDispatcher
                     subject: $outbound->subject,
                     metadata: $outbound->metadata
                 );
-            } else {
-                $outboundWithLink = $outbound;
+            }
+
+            $cost = $this->calculateMessageCost($client, $outbound->channel, $messageBody);
+            $segments = $outbound->channel === 'sms'
+                ? SmsSegmenter::segmentInfo($messageBody)['segments']
+                : 1;
+
+            if ($cost <= 0) {
+                throw new \RuntimeException('Unable to calculate message cost. Check client price_per_unit setting.');
+            }
+
+            if (!$client->hasSufficientBalance($cost)) {
+                $message->status = 'failed';
+                $message->failed_at = now();
+                $message->error_message = 'Insufficient balance. Required: KES '
+                    . number_format($cost, 2) . ', available: KES '
+                    . number_format((float) $client->balance, 2);
+                $message->save();
+
+                throw new \RuntimeException($message->error_message);
             }
 
             try {
@@ -101,6 +119,23 @@ class MessageDispatcher
                 $message->status = 'sent';
                 $message->provider_message_id = $providerMessageId;
                 $message->sent_at = now();
+                $message->cost = $cost;
+                $message->metadata = array_merge($outbound->metadata ?? [], [
+                    'segments' => $segments,
+                    'unit_price' => $this->resolveUnitPrice($client),
+                ]);
+
+                app(WalletCreditService::class)->debit(
+                    $client,
+                    $cost,
+                    sprintf('SMS to %s (%d part%s)', $outbound->recipient, $segments, $segments === 1 ? '' : 's'),
+                    [
+                        'message_id' => $message->id,
+                        'channel' => $outbound->channel,
+                        'recipient' => $outbound->recipient,
+                        'segments' => $segments,
+                    ]
+                );
             } catch (\Throwable $e) {
                 $message->status = 'failed';
                 $message->failed_at = now();
@@ -345,6 +380,30 @@ class MessageDispatcher
         );
 
         return $channel->fresh();
+    }
+
+    private function calculateMessageCost(Client $client, string $channel, string $body): float
+    {
+        $unitPrice = $this->resolveUnitPrice($client);
+
+        if ($channel === 'sms') {
+            $segments = SmsSegmenter::segmentInfo($body)['segments'];
+
+            return round($unitPrice * $segments, 4);
+        }
+
+        return round((float) $unitPrice, 4);
+    }
+
+    private function resolveUnitPrice(Client $client): float
+    {
+        $unitPrice = config('sms.subsidized_rates.' . $client->id);
+
+        if ($unitPrice === null) {
+            $unitPrice = (float) ($client->price_per_unit ?? config('sms.default_cost', 0.75));
+        }
+
+        return max((float) $unitPrice, 0.01);
     }
 }
 

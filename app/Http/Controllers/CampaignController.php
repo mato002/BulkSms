@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Campaign;
+use App\Support\CsvExporter;
+use App\Support\ListFilters;
 use App\Services\Messaging\DTO\OutboundMessage;
 use App\Services\Messaging\MessageDispatcher;
 
@@ -35,9 +37,11 @@ class CampaignController extends Controller
             $query->where('status', $request->status);
         }
         
-        $campaigns = $query->orderBy('id', 'desc')
-            ->paginate(20)
-            ->withQueryString();
+        $campaigns = ListFilters::paginate(
+            $query->orderBy('id', 'desc'),
+            $request,
+            25
+        );
 
         return view('campaigns.index', compact('campaigns'));
     }
@@ -327,5 +331,49 @@ class CampaignController extends Controller
         ]);
 
         return ['sent' => $sent, 'failed' => $failed];
+    }
+
+    public function export(Request $request)
+    {
+        $clientId = session('client_id', 1);
+        $query = Campaign::where('client_id', $clientId);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('sender_id', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('channel')) {
+            $query->where('channel', $request->channel);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $rows = $query->orderBy('id', 'desc')->get();
+
+        return CsvExporter::download(
+            'campaigns_' . date('Y-m-d') . '.csv',
+            ['ID', 'Name', 'Channel', 'Sender ID', 'Status', 'Recipients', 'Sent', 'Failed', 'Created At'],
+            function () use ($rows) {
+                foreach ($rows as $campaign) {
+                    yield [
+                        $campaign->id,
+                        $campaign->name,
+                        $campaign->channel ?? 'sms',
+                        $campaign->sender_id ?? '',
+                        $campaign->status,
+                        $campaign->total_recipients ?? 0,
+                        $campaign->sent_count ?? 0,
+                        $campaign->failed_count ?? 0,
+                        $campaign->created_at,
+                    ];
+                }
+            }
+        );
     }
 }

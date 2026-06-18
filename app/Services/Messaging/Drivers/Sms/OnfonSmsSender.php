@@ -4,6 +4,7 @@ namespace App\Services\Messaging\Drivers\Sms;
 
 use App\Services\Messaging\Contracts\MessageSender;
 use App\Services\Messaging\DTO\OutboundMessage;
+use App\Support\PhoneNumber;
 use Illuminate\Support\Facades\Http;
 
 class OnfonSmsSender implements MessageSender
@@ -25,15 +26,17 @@ class OnfonSmsSender implements MessageSender
 
         $url = 'https://api.onfonmedia.co.ke/v1/sms/SendBulkSMS';
 
+        $senderId = $this->resolveSenderId($message);
+
         $payload = [
             'ApiKey' => $apiKey,
             'ClientId' => $clientId,
             'IsUnicode' => 1,
-            'IsFlash' => 1,
-            'SenderId' => $message->sender ?? ($this->credentials['default_sender'] ?? ''),
+            'IsFlash' => 0,
+            'SenderId' => $senderId,
             'MessageParameters' => [
                 [
-                    'Number' => $message->recipient,
+                    'Number' => PhoneNumber::withCountryCode($message->recipient),
                     'Text' => $message->body,
                 ],
             ],
@@ -81,6 +84,14 @@ class OnfonSmsSender implements MessageSender
 
         if ($msgErrorCode !== 0 && $msgErrorCode !== '000') {
             $errMsg = $first['MessageErrorDescription'] ?? 'Message send failed';
+            if ((string) $msgErrorCode === '401' || str_contains(strtolower($errMsg), 'source_address')) {
+                $allowed = implode(', ', config('sms.gateways.onfon.senders', []));
+                throw new \RuntimeException(
+                    "Invalid sender ID \"{$senderId}\" for this Onfon account. "
+                    . "Update the sender under Admin → Manage Senders to a registered ID "
+                    . "(e.g. PRADY_TECH, FORTRESS). Registered senders include: {$allowed}"
+                );
+            }
             throw new \RuntimeException("Onfon MessageErrorCode {$msgErrorCode}: {$errMsg}");
         }
 
@@ -89,6 +100,17 @@ class OnfonSmsSender implements MessageSender
         }
 
         return (string) $providerId;
+    }
+
+    private function resolveSenderId(OutboundMessage $message): string
+    {
+        $senderId = strtoupper(trim($message->sender ?: ($this->credentials['default_sender'] ?? '')));
+
+        if ($senderId === '') {
+            throw new \RuntimeException('Sender ID is missing. Set it under Admin → Manage Senders.');
+        }
+
+        return $senderId;
     }
 
     public function channel(): string

@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('page_title', 'My Wallet')
+
 @section('content')
 <div class="container-fluid px-4">
     <!-- Page Header -->
@@ -9,6 +11,11 @@
             <p class="text-muted mb-0">Manage your balance and view transaction history</p>
         </div>
         <div class="d-flex gap-2 w-100 w-md-auto flex-column flex-sm-row">
+            @if(Auth::user()->isAdmin())
+            <a href="{{ route('admin.payments.index') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-credit-card"></i> All Senders' Payments
+            </a>
+            @endif
             <a href="{{ route('wallet.export') }}" class="btn btn-outline-primary">
                 <i class="bi bi-download"></i> Export CSV
             </a>
@@ -96,7 +103,44 @@
         </div>
     </div>
 
+    <x-list-results-frame>
     <!-- Transaction History -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <form method="GET" action="{{ route('wallet.index') }}" class="row g-2" data-auto-filter data-turbo-frame="main-content">
+                <div class="col-md-3">
+                    <input type="text" name="search" class="form-control form-control-sm" data-auto-filter-search
+                           placeholder="Search ref, receipt..." value="{{ request('search') }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="type" class="form-select form-select-sm">
+                        <option value="">All Types</option>
+                        <option value="credit" {{ request('type') === 'credit' ? 'selected' : '' }}>Credit</option>
+                        <option value="debit" {{ request('type') === 'debit' ? 'selected' : '' }}>Debit</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">All Status</option>
+                        <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Completed</option>
+                        <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Pending</option>
+                        <option value="processing" {{ request('status') === 'processing' ? 'selected' : '' }}>Processing</option>
+                        <option value="failed" {{ request('status') === 'failed' ? 'selected' : '' }}>Failed</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="from_date" class="form-control form-control-sm" value="{{ request('from_date') }}">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="to_date" class="form-control form-control-sm" value="{{ request('to_date') }}">
+                </div>
+                <div class="col-md-1">
+                    <x-per-page-select :current="request('per_page', 25)" class="form-select form-select-sm" />
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white border-0 py-3">
             <h5 class="mb-0"><i class="bi bi-list-ul"></i> Transaction History</h5>
@@ -140,6 +184,9 @@
                             </td>
                             <td>
                                 <div class="small">{{ $transaction->description ?? 'N/A' }}</div>
+                                @if($transaction->external_reference)
+                                    <div class="text-muted" style="font-size: 0.75rem;">Ref: {{ $transaction->external_reference }}</div>
+                                @endif
                             </td>
                             <td>
                                 @if($transaction->payment_method)
@@ -150,6 +197,10 @@
                                     @elseif($transaction->payment_method === 'manual')
                                         <span class="badge bg-info-subtle text-info">
                                             <i class="bi bi-person"></i> Manual
+                                        </span>
+                                    @elseif($transaction->payment_method === 'partner')
+                                        <span class="badge bg-primary-subtle text-primary">
+                                            <i class="bi bi-plug"></i> Partner API
                                         </span>
                                     @else
                                         <span class="badge bg-secondary-subtle text-secondary">
@@ -211,19 +262,14 @@
             @endif
         </div>
         
-        @if($transactions->hasPages())
-        <div class="card-footer bg-white border-0">
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="text-muted small">
-                    Showing {{ $transactions->firstItem() }} to {{ $transactions->lastItem() }} of {{ $transactions->total() }} transactions
-                </div>
-                <div>
-                    {{ $transactions->links('vendor.pagination.simple') }}
-                </div>
-            </div>
-        </div>
+        @if($transactions->hasPages() || $transactions->total() > 0)
+        <x-list-pagination-footer
+            :paginator="$transactions"
+            :export-route="route('wallet.export', request()->query())"
+        />
         @endif
     </div>
+    </x-list-results-frame>
 </div>
 
 @push('styles')

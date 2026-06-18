@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\WalletTransaction;
 use App\Models\Client;
+use App\Models\Transaction;
 use App\Services\MpesaService;
 use App\Services\WebhookService;
 use App\Mail\TopupConfirmation;
@@ -82,6 +83,104 @@ class MpesaWebhookController extends Controller
     }
 
     /**
+     * C2B validation URL — Safaricom calls before accepting a paybill payment.
+     */
+    public function c2bValidate(Request $request)
+    {
+        Log::info('M-Pesa C2B validation received', [
+            'body' => $request->all(),
+            'ip' => $request->ip(),
+        ]);
+
+        return response()->json([
+            'ResultCode' => '0',
+            'ResultDesc' => 'Accepted',
+        ]);
+    }
+
+    /**
+     * C2B confirmation URL — Safaricom calls after a paybill payment is received.
+     */
+    public function c2bConfirm(Request $request)
+    {
+        Log::info('M-Pesa C2B confirmation received', [
+            'body' => $request->all(),
+            'ip' => $request->ip(),
+        ]);
+
+        // TODO: match BillRefNumber / account reference to client wallet top-up
+
+        return response()->json([
+            'ResultCode' => '0',
+            'ResultDesc' => 'Accepted',
+        ]);
+    }
+
+    /**
+     * B2C result callback.
+     */
+    public function b2cResult(Request $request)
+    {
+        Log::info('M-Pesa B2C result received', [
+            'body' => $request->all(),
+            'ip' => $request->ip(),
+        ]);
+
+        return response()->json([
+            'ResultCode' => 0,
+            'ResultDesc' => 'Accepted',
+        ]);
+    }
+
+    /**
+     * B2C timeout callback.
+     */
+    public function b2cTimeout(Request $request)
+    {
+        Log::warning('M-Pesa B2C timeout received', [
+            'body' => $request->all(),
+            'ip' => $request->ip(),
+        ]);
+
+        return response()->json([
+            'ResultCode' => 0,
+            'ResultDesc' => 'Accepted',
+        ]);
+    }
+
+    /**
+     * Transaction reversal result callback.
+     */
+    public function reversalResult(Request $request)
+    {
+        Log::info('M-Pesa reversal result received', [
+            'body' => $request->all(),
+            'ip' => $request->ip(),
+        ]);
+
+        return response()->json([
+            'ResultCode' => 0,
+            'ResultDesc' => 'Accepted',
+        ]);
+    }
+
+    /**
+     * Transaction reversal timeout callback.
+     */
+    public function reversalTimeout(Request $request)
+    {
+        Log::warning('M-Pesa reversal timeout received', [
+            'body' => $request->all(),
+            'ip' => $request->ip(),
+        ]);
+
+        return response()->json([
+            'ResultCode' => 0,
+            'ResultDesc' => 'Accepted',
+        ]);
+    }
+
+    /**
      * Process successful payment
      *
      * @param array $data
@@ -96,9 +195,7 @@ class MpesaWebhookController extends Controller
                 ->first();
 
             if (!$transaction) {
-                Log::warning('M-Pesa callback: Transaction not found', [
-                    'checkout_request_id' => $data['checkout_request_id']
-                ]);
+                $this->processLegacyTransactionPayment($data);
                 return;
             }
 
@@ -295,6 +392,32 @@ class MpesaWebhookController extends Controller
                 'checkout_request_id' => $checkoutRequestId
             ]);
         }
+    }
+
+    /**
+     * Fall back to legacy Transaction records (web wallet / PaymentController flow).
+     */
+    protected function processLegacyTransactionPayment(array $data): void
+    {
+        $transaction = Transaction::where('external_reference', $data['checkout_request_id'] ?? '')
+            ->where('status', 'pending')
+            ->first();
+
+        if (!$transaction) {
+            Log::warning('M-Pesa callback: No wallet or legacy transaction found', [
+                'checkout_request_id' => $data['checkout_request_id'] ?? null,
+            ]);
+            return;
+        }
+
+        $transaction->markAsCompleted($data['mpesa_receipt'] ?? null);
+
+        Log::info('M-Pesa legacy payment processed', [
+            'transaction_id' => $transaction->id,
+            'client_id' => $transaction->client_id,
+            'amount' => $transaction->amount,
+            'mpesa_receipt' => $data['mpesa_receipt'] ?? null,
+        ]);
     }
 }
 

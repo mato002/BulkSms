@@ -24,7 +24,7 @@ class FixUserClients extends Command
         $defaultClient = Client::find(1);
         
         if (!$defaultClient) {
-            $this->error('Default client (ID: 1) not found. Please run: php artisan db:seed --class=ClientsSeeder');
+            $this->error('Default client (ID: 1) not found. Please run: php artisan db:seed --class=ClientSeeder');
             return 1;
         }
 

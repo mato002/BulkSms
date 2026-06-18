@@ -127,5 +127,31 @@ class WalletTransaction extends Model
     {
         return 'TXN-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
     }
+
+    public function getPaymentMethodLabelAttribute(): string
+    {
+        return match ($this->payment_method) {
+            'mpesa' => 'M-Pesa',
+            'manual' => 'Manual',
+            'partner' => 'Partner API',
+            default => $this->payment_method ? ucfirst($this->payment_method) : '—',
+        };
+    }
+
+    public function getExternalReferenceAttribute(): ?string
+    {
+        $metadata = $this->metadata ?? [];
+
+        return $metadata['external_reference'] ?? null;
+    }
+
+    public function getSourceLabelAttribute(): string
+    {
+        if ($this->type === 'debit') {
+            return 'SMS Usage';
+        }
+
+        return $this->payment_method_label;
+    }
 }
 

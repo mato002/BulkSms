@@ -95,6 +95,7 @@ class Kernel extends HttpKernel
         'api.auth' => \App\Http\Middleware\ApiAuth::class,
         'company.auth' => \App\Http\Middleware\CompanyAuth::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        'admin.api' => \App\Http\Middleware\AdminApiMiddleware::class,
         'tier.rate.limit' => \App\Http\Middleware\TierBasedRateLimit::class,
         'tenant.active' => \App\Http\Middleware\EnsureClientIsActive::class,
     ];

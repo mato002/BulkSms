@@ -128,11 +128,8 @@ Route::post('/reset-password-manual', function(Request $request) {
 
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
-// Landing Page (for guests) / Dashboard (for authenticated users)
-Route::get('/', function() {
-    if (auth()->check()) {
-        return redirect()->route('dashboard');
-    }
+// Landing Page (accessible to everyone; dashboard is a separate route)
+Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
@@ -177,6 +174,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('admin')->group(function () {
         // API Monitor (Admin only)
         Route::get('/api-monitor', [App\Http\Controllers\ApiMonitorController::class, 'index'])->name('api-monitor.index');
+        Route::get('/api-monitor/export', [App\Http\Controllers\ApiMonitorController::class, 'export'])->name('api-monitor.export');
         Route::get('/api-monitor/{id}', [App\Http\Controllers\ApiMonitorController::class, 'show'])->name('api-monitor.show');
         Route::get('/api-monitor-stats', [App\Http\Controllers\ApiMonitorController::class, 'statistics'])->name('api-monitor.statistics');
         Route::get('/api-monitor-activity', [App\Http\Controllers\ApiMonitorController::class, 'activity'])->name('api-monitor.activity');
@@ -185,11 +183,14 @@ Route::middleware(['auth'])->group(function () {
 
     // Shared routes (for both admin and tenants)
     Route::post('contacts/bulk-action', [ContactController::class, 'bulkAction'])->name('contacts.bulk-action');
+    Route::get('contacts/export', [ContactController::class, 'export'])->name('contacts.export');
     Route::resource('contacts', ContactController::class);
     Route::post('contacts/import', [ContactController::class, 'import'])->name('contacts.import');
 
+    Route::get('templates/export', [TemplateController::class, 'export'])->name('templates.export');
     Route::resource('templates', TemplateController::class);
 
+    Route::get('campaigns/export', [CampaignController::class, 'export'])->name('campaigns.export');
     Route::resource('campaigns', CampaignController::class);
     Route::post('campaigns/{campaign}/send', [CampaignController::class, 'send'])->name('campaigns.send');
 
@@ -215,13 +216,24 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/{id}', [App\Http\Controllers\NotificationController::class, 'delete'])->name('delete');
     });
 
+    // Money movement alerts (wallet credits, debits, pending payments)
+    Route::prefix('money-alerts')->name('money-alerts.')->group(function () {
+        Route::get('/unread-count', [App\Http\Controllers\MoneyAlertController::class, 'unreadCount'])->name('unread-count');
+        Route::get('/list', [App\Http\Controllers\MoneyAlertController::class, 'list'])->name('list');
+        Route::post('/mark-read', [App\Http\Controllers\MoneyAlertController::class, 'markAllRead'])->name('mark-read');
+    });
+
     // Messages (Shared - all authenticated users)
     Route::resource('messages', MessageController::class)->only(['index', 'show']);
+    Route::get('/messages/export', [MessageController::class, 'exportConversations'])->name('messages.export');
     Route::get('/messages-all', [MessageController::class, 'allMessages'])->name('messages.all');
+    Route::get('/messages-all/export', [MessageController::class, 'exportAll'])->name('messages.all.export');
 
     // Inbox (Conversations/Chat) - Shared
+    Route::get('/inbox/export', [InboxController::class, 'export'])->name('inbox.export');
     Route::get('/inbox', [InboxController::class, 'index'])->name('inbox.index');
     Route::get('/inbox/start/{contact}', [InboxController::class, 'startWithContact'])->name('inbox.start');
+    Route::get('/inbox/{conversation}/panel', [InboxController::class, 'panel'])->name('inbox.panel');
     Route::get('/inbox/{conversation}', [InboxController::class, 'show'])->name('inbox.show');
     Route::post('/inbox/{conversation}/reply', [InboxController::class, 'reply'])->name('inbox.reply');
     Route::post('/inbox/{conversation}/status', [InboxController::class, 'updateStatus'])->name('inbox.updateStatus');
@@ -285,6 +297,7 @@ Route::prefix('api')->name('api.')->group(function () {
         // Notifications
         Route::prefix('notifications')->name('notifications.')->group(function () {
             Route::get('/', [App\Http\Controllers\NotificationController::class, 'index'])->name('index');
+            Route::get('/export', [App\Http\Controllers\NotificationController::class, 'export'])->name('export');
             Route::get('/unread-count', [App\Http\Controllers\NotificationController::class, 'unreadCount'])->name('unread-count');
             Route::post('/{id}/read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('mark-read');
             Route::post('/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
@@ -343,8 +356,10 @@ Route::prefix('api')->name('api.')->group(function () {
     // Admin Sender/Tenant Management Routes (Admin only)
     Route::prefix('admin/senders')->name('admin.senders.')->middleware('admin')->group(function () {
         Route::get('/', [AdminController::class, 'index'])->name('index');
+        Route::get('/export', [AdminController::class, 'exportSenders'])->name('export');
         Route::get('/create', [AdminController::class, 'create'])->name('create');
         Route::post('/', [AdminController::class, 'store'])->name('store');
+        Route::get('/{id}/messages/export', [AdminController::class, 'exportClientMessages'])->name('messages.export');
         Route::get('/{id}', [AdminController::class, 'show'])->name('show');
         Route::get('/{id}/edit', [AdminController::class, 'edit'])->name('edit');
         Route::put('/{id}', [AdminController::class, 'update'])->name('update');
@@ -361,9 +376,16 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::get('/{id}/onfon-transactions', [AdminController::class, 'getOnfonTransactions'])->name('onfon-transactions');
     });
 
+    // Admin payments ledger (all senders)
+    Route::prefix('admin/payments')->name('admin.payments.')->middleware('admin')->group(function () {
+        Route::get('/', [AdminController::class, 'payments'])->name('index');
+        Route::get('/export', [AdminController::class, 'exportPayments'])->name('export');
+    });
+
     // Admin User Management Routes (Admin only)
     Route::prefix('admin/admins')->name('admin.admins.')->middleware('admin')->group(function () {
         Route::get('/', [AdminController::class, 'admins'])->name('index');
+        Route::get('/export', [AdminController::class, 'exportAdmins'])->name('export');
         Route::get('/create', [AdminController::class, 'createAdmin'])->name('create');
         Route::post('/', [AdminController::class, 'storeAdmin'])->name('store');
         Route::get('/{id}/edit', [AdminController::class, 'editAdmin'])->name('edit');

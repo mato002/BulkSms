@@ -209,7 +209,7 @@
                                     <div class="col-md-6">
                                         <div class="form-group mb-3">
                                             <label for="manual_amount" class="form-label">Amount (KES)</label>
-                                            <input type="number" class="form-control" id="manual_amount" min="100" max="1000000" step="100">
+                                            <input type="number" class="form-control" id="manual_amount" min="10" max="1000000" step="1">
                                         </div>
                                     </div>
                                     <div class="col-md-6">

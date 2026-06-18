@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Contact;
+use App\Support\CsvExporter;
+use App\Support\ListFilters;
 use App\Support\PhoneNumber;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -31,7 +33,11 @@ class ContactController extends Controller
             $query->where('department', 'like', "%{$request->get('department')}%");
         }
 
-        $contacts = $query->orderBy('id', 'desc')->paginate(50);
+        $contacts = ListFilters::paginate(
+            $query->orderBy('id', 'desc'),
+            $request,
+            25
+        );
 
         $availableTags = DB::table('tags')
             ->where('client_id', $clientId)
@@ -274,5 +280,41 @@ class ContactController extends Controller
         return redirect()
             ->route('contacts.index')
             ->with('success', 'Tag "' . $tag->name . '" applied to ' . count($contactIds) . ' contact(s).');
+    }
+
+    public function export(Request $request)
+    {
+        $clientId = session('client_id', 1);
+        $query = DB::table('contacts')->where('client_id', $clientId);
+
+        if ($request->filled('search')) {
+            $search = $request->get('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('contact', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('department')) {
+            $query->where('department', 'like', "%{$request->get('department')}%");
+        }
+
+        $rows = $query->orderBy('id', 'desc')->get();
+
+        return CsvExporter::download(
+            'contacts_' . date('Y-m-d') . '.csv',
+            ['ID', 'Name', 'Phone', 'Department', 'Created At'],
+            function () use ($rows) {
+                foreach ($rows as $contact) {
+                    yield [
+                        $contact->id,
+                        $contact->name,
+                        $contact->contact,
+                        $contact->department ?? '',
+                        $contact->created_at,
+                    ];
+                }
+            }
+        );
     }
 }

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\ApiLog;
 use App\Models\Client;
+use App\Support\CsvExporter;
+use App\Support\ListFilters;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -47,7 +49,7 @@ class ApiMonitorController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
         
-        $logs = $query->paginate(50);
+        $logs = ListFilters::paginate($query, $request, 25);
         $clients = $this->getCachedClients();
         
         // Get statistics
@@ -181,6 +183,55 @@ class ApiMonitorController extends Controller
         $deleted = ApiLog::where('created_at', '<', now()->subDays($days))->delete();
         
         return redirect()->back()->with('success', "Deleted {$deleted} old log entries (older than {$days} days)");
+    }
+
+    public function export(Request $request)
+    {
+        $query = ApiLog::with('client')->latest();
+
+        if ($request->filled('client_id')) {
+            $query->where('client_id', $request->client_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('success', $request->status === 'success');
+        }
+
+        if ($request->filled('endpoint')) {
+            $query->where('endpoint', 'like', '%' . $request->endpoint . '%');
+        }
+
+        if ($request->filled('method')) {
+            $query->where('method', strtoupper($request->method));
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $rows = $query->limit(10000)->get();
+
+        return CsvExporter::download(
+            'api_logs_' . date('Y-m-d') . '.csv',
+            ['Time', 'Client', 'Method', 'Endpoint', 'Status', 'Response Time (ms)', 'IP Address'],
+            function () use ($rows) {
+                foreach ($rows as $log) {
+                    yield [
+                        $log->created_at->format('Y-m-d H:i:s'),
+                        $log->client?->name ?? 'N/A',
+                        $log->method,
+                        $log->endpoint,
+                        $log->success ? 'Success' : 'Failed',
+                        $log->response_time_ms ?? '',
+                        $log->ip_address ?? '',
+                    ];
+                }
+            }
+        );
     }
 
     private function getCachedClients(): Collection

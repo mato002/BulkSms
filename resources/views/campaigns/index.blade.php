@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('page_title', 'Campaigns')
+
 @section('content')
 @include('components.modern-page-styles')
 
@@ -30,6 +32,7 @@
         </div>
     @endif
 
+    <x-list-results-frame>
     <!-- Stats Cards -->
     <div class="stats-grid mb-4">
         <div class="stat-card-modern">
@@ -78,9 +81,9 @@
             </h3>
         </div>
         <div class="modern-card-body">
-            <form method="GET" class="modern-filter-form-campaigns">
+            <form method="GET" class="modern-filter-form-campaigns" data-auto-filter data-turbo-frame="main-content">
                 <div class="filter-group">
-                    <input type="text" name="search" class="modern-input" value="{{ request('search') }}" placeholder="Search by name or sender...">
+                    <input type="text" name="search" class="modern-input" data-auto-filter-search value="{{ request('search') }}" placeholder="Search by name or sender...">
                 </div>
                 <div class="filter-group">
                     <select name="channel" class="modern-select">
@@ -97,12 +100,11 @@
                         <option value="sent" {{ request('status')==='sent' ? 'selected' : '' }}>✅ Sent</option>
                     </select>
                 </div>
+                <div class="filter-group">
+                    <x-per-page-select :current="request('per_page', 25)" class="modern-select" />
+                </div>
                 <div class="filter-actions">
-                    <button type="submit" class="btn-primary-modern">
-                        <i class="bi bi-search"></i>
-                        <span>Filter</span>
-                    </button>
-                    <a href="{{ route('campaigns.index') }}" class="btn-secondary-modern">
+                    <a href="{{ route('campaigns.index') }}" class="btn-secondary-modern" data-turbo-frame="main-content">
                         <i class="bi bi-x-circle"></i>
                         <span>Clear</span>
                     </a>
@@ -218,12 +220,12 @@
                 </table>
             </div>
         </div>
-        @if($campaigns->hasPages())
-        <div class="modern-card-footer">
-            {{ $campaigns->links('vendor.pagination.simple') }}
-        </div>
-        @endif
+        <x-list-pagination-footer
+            :paginator="$campaigns"
+            :export-route="route('campaigns.export', request()->query())"
+        />
     </div>
+    </x-list-results-frame>
 </div>
 
 <style>

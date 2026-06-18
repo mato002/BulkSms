@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\ListFilters;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\Messaging\DTO\OutboundMessage;
 use App\Services\Messaging\MessageDispatcher;
+use App\Support\CsvExporter;
 
 class InboxController extends Controller
 {
@@ -45,9 +47,11 @@ class InboxController extends Controller
             });
         }
 
-        $conversations = $query
-            ->orderByDesc('conversations.last_message_at')
-            ->paginate(20);
+        $conversations = ListFilters::paginate(
+            $query->orderByDesc('conversations.last_message_at'),
+            $request,
+            25
+        );
 
         return view('inbox.index', compact('conversations'));
     }
@@ -56,6 +60,26 @@ class InboxController extends Controller
      * Show conversation/chat with a contact
      */
     public function show($conversationId)
+    {
+        $data = $this->loadConversation($conversationId);
+
+        return view('inbox.chat', $data);
+    }
+
+    /**
+     * Turbo frame partial for live chat refresh (no layout).
+     */
+    public function panel($conversationId)
+    {
+        $data = $this->loadConversation($conversationId);
+
+        return view('inbox.partials.chat-panel-frame', $data);
+    }
+
+    /**
+     * Load conversation and messages for the current client.
+     */
+    private function loadConversation($conversationId): array
     {
         $clientId = session('client_id', 1);
 
@@ -76,13 +100,11 @@ class InboxController extends Controller
             abort(404);
         }
 
-        // Get all messages in this conversation
         $messages = DB::table('messages')
             ->where('conversation_id', $conversationId)
             ->orderBy('created_at', 'asc')
             ->get();
 
-        // Mark as read
         DB::table('conversations')
             ->where('id', $conversationId)
             ->update([
@@ -99,12 +121,26 @@ class InboxController extends Controller
                 'read_at' => now(),
             ]);
 
-        // Update contact unread count
         DB::table('contacts')
             ->where('id', $conversation->contact_id)
             ->update(['unread_messages' => 0]);
 
-        return view('inbox.chat', compact('conversation', 'messages'));
+        return compact('conversation', 'messages');
+    }
+
+    private function redirectToConversation(int $conversationId, ?string $flashKey = null, ?string $flashMessage = null)
+    {
+        $route = request()->header('Turbo-Frame') === 'chat-panel'
+            ? route('inbox.panel', $conversationId)
+            : route('inbox.show', $conversationId);
+
+        $redirect = redirect()->to($route);
+
+        if ($flashKey && $flashMessage) {
+            $redirect->with($flashKey, $flashMessage);
+        }
+
+        return $redirect;
     }
 
     /**
@@ -141,7 +177,11 @@ class InboxController extends Controller
             body: $validated['message']
         );
 
-        $message = $dispatcher->dispatch($outbound);
+        try {
+            $message = $dispatcher->dispatch($outbound);
+        } catch (\RuntimeException $e) {
+            return $this->redirectToConversation($conversationId, 'error', $e->getMessage());
+        }
 
         // Update message with conversation_id and direction
         DB::table('messages')
@@ -169,7 +209,15 @@ class InboxController extends Controller
                 'total_messages' => DB::raw('total_messages + 1'),
             ]);
 
-        return redirect()->route('inbox.show', $conversationId)->with('success', 'Message sent!');
+        if ($message->status === 'failed') {
+            return $this->redirectToConversation(
+                $conversationId,
+                'error',
+                'Message failed to send: ' . ($message->error_message ?: 'Unknown error')
+            );
+        }
+
+        return $this->redirectToConversation($conversationId, 'success', 'Message sent!');
     }
 
     /**
@@ -191,7 +239,7 @@ class InboxController extends Controller
                 'updated_at' => now(),
             ]);
 
-        return redirect()->back()->with('success', 'Conversation status updated');
+        return $this->redirectToConversation($conversationId, 'success', 'Conversation status updated');
     }
 
     /**
@@ -238,5 +286,62 @@ class InboxController extends Controller
         ]);
 
         return redirect()->route('inbox.show', $conversationId)->with('success', 'New conversation started!');
+    }
+
+    public function export(Request $request)
+    {
+        $clientId = session('client_id', 1);
+
+        $query = DB::table('conversations')
+            ->join('contacts', 'conversations.contact_id', '=', 'contacts.id')
+            ->where('conversations.client_id', $clientId)
+            ->select(
+                'conversations.id',
+                'contacts.name as contact_name',
+                'contacts.contact as contact_phone',
+                'conversations.channel',
+                'conversations.status',
+                'conversations.unread_count',
+                'conversations.last_message_preview',
+                'conversations.last_message_at'
+            );
+
+        if ($request->filled('status')) {
+            $query->where('conversations.status', $request->status);
+        }
+
+        if ($request->filled('channel')) {
+            $query->where('conversations.channel', $request->channel);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('contacts.name', 'like', "%{$search}%")
+                    ->orWhere('contacts.contact', 'like', "%{$search}%")
+                    ->orWhere('conversations.last_message_preview', 'like', "%{$search}%");
+            });
+        }
+
+        $rows = $query->orderByDesc('conversations.last_message_at')->get();
+
+        return CsvExporter::download(
+            'inbox_' . date('Y-m-d') . '.csv',
+            ['ID', 'Contact', 'Phone', 'Channel', 'Status', 'Unread', 'Last Message', 'Last Activity'],
+            function () use ($rows) {
+                foreach ($rows as $row) {
+                    yield [
+                        $row->id,
+                        $row->contact_name,
+                        $row->contact_phone,
+                        $row->channel,
+                        $row->status,
+                        $row->unread_count,
+                        $row->last_message_preview ?? '',
+                        $row->last_message_at ?? '',
+                    ];
+                }
+            }
+        );
     }
 }

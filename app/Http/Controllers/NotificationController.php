@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Notification as CustomNotification;
 use App\Models\NotificationSetting;
+use App\Support\CsvExporter;
+use App\Support\ListFilters;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -12,19 +14,86 @@ class NotificationController extends Controller
     /**
      * Show notifications index page
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
-        $notifications = CustomNotification::where('user_id', $user->id)
-            ->latest()
-            ->paginate(20);
+        $query = CustomNotification::where('user_id', $user->id);
 
-        // Get notification settings
+        if ($request->filled('search')) {
+            $search = '%' . $request->search . '%';
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', $search)
+                    ->orWhere('message', 'like', $search);
+            });
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('read')) {
+            if ($request->read === 'unread') {
+                $query->where('is_read', false);
+            } elseif ($request->read === 'read') {
+                $query->where('is_read', true);
+            }
+        }
+
+        $notifications = ListFilters::paginate(
+            $query->latest(),
+            $request,
+            25
+        );
+
         $clientId = session('client_id', 1);
         $userId = Auth::id();
         $settings = NotificationSetting::getForClient($clientId, $userId);
 
         return view('notifications.index', compact('notifications', 'settings'));
+    }
+
+    public function export(Request $request)
+    {
+        $user = Auth::user();
+        $query = CustomNotification::where('user_id', $user->id);
+
+        if ($request->filled('search')) {
+            $search = '%' . $request->search . '%';
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', $search)
+                    ->orWhere('message', 'like', $search);
+            });
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('read')) {
+            if ($request->read === 'unread') {
+                $query->where('is_read', false);
+            } elseif ($request->read === 'read') {
+                $query->where('is_read', true);
+            }
+        }
+
+        $rows = $query->latest()->limit(5000)->get();
+
+        return CsvExporter::download(
+            'notifications_' . date('Y-m-d') . '.csv',
+            ['Date', 'Type', 'Title', 'Message', 'Read At'],
+            function () use ($rows) {
+                foreach ($rows as $notification) {
+                    yield [
+                        $notification->created_at,
+                        $notification->type ?? '',
+                        $notification->title ?? '',
+                        $notification->message ?? '',
+                        $notification->read_at ?? '',
+                    ];
+                }
+            }
+        );
     }
 
     /**

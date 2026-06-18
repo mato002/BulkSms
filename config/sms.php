@@ -40,7 +40,7 @@ return [
                 'AHADI_EPEX', 'MWEGUNI_LTD', 'PRADY_TECH', 'ZEN_PHARMA',
                 'PAGECAPITAL', 'NKR_A_CLUB', 'JIRANIHODAR', 'NOVA_BRIDGE',
                 'MALIK', 'NOBLE_MICRO', 'AMPLE_SWISS', 'NEWPRO_CAP',
-                'DAFACOM_LTD', 'EMPISAI_LTD', 'FANUKA_LTD', 'MATECHTE'
+                'DAFACOM_LTD', 'EMPISAI_LTD', 'FANUKA_LTD', 'MATECHTE', 'GAITHO_AGY'
             ]
         ],
 
@@ -64,6 +64,13 @@ return [
     'default_cost' => env('SMS_DEFAULT_COST', 0.75),
     'rate_limit' => env('SMS_RATE_LIMIT', 60), // requests per minute
 
+    // Append platform reply short links to outbound SMS (off by default)
+    'append_reply_link' => env('SMS_APPEND_REPLY_LINK', false),
+
+    // Append STOP opt-out footer to outbound SMS (off by default)
+    'append_stop_footer' => env('SMS_APPEND_STOP_FOOTER', false),
+    'stop_footer' => env('SMS_STOP_FOOTER', 'STOP *456*9*5#'),
+
     /*
     |--------------------------------------------------------------------------
     | Subsidized Rates
@@ -74,6 +81,7 @@ return [
     */
 
     'subsidized_rates' => [
+        3 => 0.60,  // Gaitho
         7 => 0.7,
         8 => 0.7,
         17 => 0.7,

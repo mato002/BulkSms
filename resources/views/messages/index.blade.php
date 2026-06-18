@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('page_title', 'Conversations')
+
 @section('content')
 <div class="modern-page-container">
     <!-- Page Header -->
@@ -61,6 +63,7 @@
         </div>
     </div>
 
+    <x-list-results-frame>
     <!-- Filter Card -->
     <div class="modern-card">
         <div class="modern-card-header">
@@ -69,9 +72,9 @@
             </h3>
         </div>
         <div class="modern-card-body">
-            <form method="GET" action="{{ route('messages.index') }}" class="modern-filter-form-messages">
+            <form method="GET" action="{{ route('messages.index') }}" class="modern-filter-form-messages" data-auto-filter data-turbo-frame="main-content">
                 <div class="filter-group">
-                    <input type="text" class="modern-input" name="search" placeholder="Search name, phone, or message..." value="{{ request('search') }}">
+                    <input type="text" class="modern-input" name="search" data-auto-filter-search placeholder="Search name, phone, or message..." value="{{ request('search') }}">
                 </div>
                 <div class="filter-group">
                     <select class="modern-select" name="channel">
@@ -89,12 +92,11 @@
                         <option value="archived" {{ request('status') === 'archived' ? 'selected' : '' }}>📦 Archived</option>
                     </select>
                 </div>
+                <div class="filter-group">
+                    <x-per-page-select :current="request('per_page', 25)" class="modern-select" />
+                </div>
                 <div class="filter-actions">
-                    <button type="submit" class="btn-primary-modern">
-                        <i class="bi bi-search"></i>
-                        <span>Filter</span>
-                    </button>
-                    <a href="{{ route('messages.index') }}" class="btn-secondary-modern">
+                    <a href="{{ route('messages.index') }}" class="btn-secondary-modern" data-turbo-frame="main-content">
                         <i class="bi bi-x-circle"></i>
                         <span>Clear</span>
                     </a>
@@ -209,12 +211,12 @@
                 </table>
             </div>
         </div>
-        @if($conversations->hasPages())
-        <div class="modern-card-footer">
-            {{ $conversations->links('vendor.pagination.simple') }}
-        </div>
-        @endif
+        <x-list-pagination-footer
+            :paginator="$conversations"
+            :export-route="route('messages.export', request()->query())"
+        />
     </div>
+    </x-list-results-frame>
 </div>
 
 <style>

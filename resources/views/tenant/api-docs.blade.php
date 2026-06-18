@@ -281,6 +281,28 @@ X-API-Key: {{ $client->api_key }}</code></pre>
                 </div>
             </div>
 
+            <!-- M-Pesa Top-up -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-mobile-alt"></i> Top Up via M-Pesa (API)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h6>Endpoint</h6>
+                    <code class="d-block mb-3">POST {{ url('/api') }}/{{ $client->id }}/wallet/topup</code>
+
+                    <h6>Request Body</h6>
+                    <pre class="bg-light p-3 rounded mb-3"><code>{
+  "amount": 500,
+  "payment_method": "mpesa",
+  "phone_number": "254712345678"
+}</code></pre>
+
+                    <p class="text-muted small mb-0">Balance updates automatically after M-Pesa confirms payment.</p>
+                </div>
+            </div>
+
             <!-- Error Codes -->
             <div class="card shadow mb-4">
                 <div class="card-header py-3">

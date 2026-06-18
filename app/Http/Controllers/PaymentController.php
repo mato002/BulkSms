@@ -324,42 +324,11 @@ class PaymentController extends Controller
     }
 
     /**
-     * Handle M-Pesa callback
+     * Handle M-Pesa callback (delegates to wallet webhook handler).
      */
     public function handleMpesaCallback(Request $request)
     {
-        try {
-            $callbackData = $request->all();
-            $result = $this->mpesaService->handleCallback($callbackData);
-
-            if ($result['success']) {
-                // Find transaction by checkout request ID
-                $transaction = Transaction::where('external_reference', $result['checkout_request_id'])
-                    ->where('status', 'pending')
-                    ->first();
-
-                if ($transaction) {
-                    $transaction->markAsCompleted($result['mpesa_receipt_number']);
-                    
-                    Log::info('M-Pesa Payment Completed', [
-                        'transaction_id' => $transaction->id,
-                        'client_id' => $transaction->client_id,
-                        'amount' => $transaction->amount,
-                        'mpesa_receipt' => $result['mpesa_receipt_number'],
-                    ]);
-                }
-            }
-
-            return response()->json(['success' => true]);
-
-        } catch (\Exception $e) {
-            Log::error('M-Pesa Callback Error', [
-                'error' => $e->getMessage(),
-                'callback_data' => $request->all(),
-            ]);
-
-            return response()->json(['success' => false], 500);
-        }
+        return app(MpesaWebhookController::class)->callback($request);
     }
 
     /**

@@ -4,7 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="turbo-cache-control" content="no-cache">
     <title>{{ config('app.name', 'Laravel') }}</title>
+    <script type="module">
+        import * as Turbo from 'https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.13/+esm';
+        window.Turbo = Turbo;
+    </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -238,13 +243,183 @@
             z-index: 1000;
             display: flex;
             align-items: center;
-            padding: 0 2rem;
+            justify-content: space-between;
+            gap: 0.5rem;
+            padding: 0 1.25rem;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
             transition: left 0.3s ease;
         }
 
         .header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+            flex: 0 1 auto;
+        }
+
+        .header-page-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #0f172a;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 10rem;
+        }
+
+        .header-center {
             flex: 1;
+            display: flex;
+            justify-content: center;
+            min-width: 0;
+            padding: 0 1rem;
+        }
+
+        .search-trigger-btn {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            max-width: 36rem;
+            padding: 0.5rem 0.875rem 0.5rem 2.25rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 0.875rem;
+            text-align: left;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .search-trigger-btn:hover {
+            border-color: #cbd5e1;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+
+        .search-trigger-btn .search-trigger-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        .search-trigger-btn .search-trigger-kbd {
+            margin-left: auto;
+            display: none;
+            gap: 0.25rem;
+            align-items: center;
+        }
+
+        .search-trigger-btn .search-trigger-kbd kbd {
+            font-size: 0.65rem;
+            padding: 0.15rem 0.35rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.25rem;
+            background: #fff;
+            color: #94a3b8;
+        }
+
+        .header-action-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.4rem 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            background: #fff;
+            color: #475569;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            text-decoration: none;
+            white-space: nowrap;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .header-action-btn:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #0f172a;
+        }
+
+        .header-search-mobile-btn {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: #64748b;
+            padding: 0.35rem;
+            cursor: pointer;
+        }
+
+        .search-palette-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(2px);
+            z-index: 2000;
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 12vh 1rem 1rem;
+        }
+
+        .search-palette-backdrop.show {
+            display: flex;
+        }
+
+        .search-palette-panel {
+            width: 100%;
+            max-width: 40rem;
+            background: #fff;
+            border-radius: 0.75rem;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+        }
+
+        .search-palette-input-wrap {
+            position: relative;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0.875rem 1rem;
+        }
+
+        .search-palette-input-wrap > i {
+            position: absolute;
+            left: 1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+
+        .search-palette-input-wrap input {
+            width: 100%;
+            padding: 0.625rem 1rem 0.625rem 2.5rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            font-size: 0.9375rem;
+        }
+
+        .search-palette-input-wrap input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+        }
+
+        .search-palette-results {
+            max-height: min(60vh, 24rem);
+            overflow-y: auto;
+        }
+
+        .search-palette-hint {
+            padding: 1.25rem 1rem;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.875rem;
         }
 
         .mobile-menu-btn {
@@ -259,11 +434,23 @@
         .header-right {
             display: flex;
             align-items: center;
-            gap: 1.5rem;
+            gap: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        @media (min-width: 1200px) {
+            .header-page-title {
+                max-width: 14rem;
+            }
+
+            .header-right {
+                gap: 0.75rem;
+            }
         }
 
         .header-search {
             position: relative;
+            display: none;
         }
 
         .header-search input {
@@ -389,6 +576,30 @@
             position: relative;
             cursor: pointer;
         }
+
+        .header-notifications.has-unread .money-icon {
+            color: #059669;
+        }
+
+        .header-notifications.money-bell-pulse .money-icon {
+            animation: money-bell-pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes money-bell-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+
+        .money-alert-amount {
+            font-weight: 700;
+            font-size: 0.8125rem;
+            white-space: nowrap;
+        }
+
+        .money-alert-amount.text-success { color: #059669; }
+        .money-alert-amount.text-danger { color: #dc2626; }
+        .money-alert-amount.text-warning { color: #d97706; }
+        .money-alert-amount.text-primary { color: #2563eb; }
 
         .notification-icon {
             font-size: 1.35rem;
@@ -574,6 +785,19 @@
             }
 
             .mobile-menu-btn {
+                display: block;
+            }
+
+            .header-page-title {
+                max-width: 6rem;
+                font-size: 0.9rem;
+            }
+
+            .header-center {
+                display: none;
+            }
+
+            .header-search-mobile-btn {
                 display: block;
             }
 
@@ -827,6 +1051,89 @@
             text-align: center;
             color: #94a3b8;
         }
+
+        /* Turbo Frame loading states */
+        turbo-frame#main-content,
+        .list-results-region {
+            display: block;
+            min-height: 1px;
+        }
+
+        turbo-frame.turbo-frame-loading {
+            opacity: 0.65;
+            pointer-events: none;
+            transition: opacity 0.15s ease;
+            position: relative;
+        }
+
+        turbo-frame.turbo-frame-loading::after {
+            content: '';
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid #e2e8f0;
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: turbo-spin 0.6s linear infinite;
+            z-index: 10;
+        }
+
+        @keyframes turbo-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Global flash toasts (persist outside turbo frames) */
+        #flash-toast-container {
+            position: fixed;
+            top: calc(var(--header-height) + 0.75rem);
+            right: 1rem;
+            z-index: 1100;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-width: min(420px, calc(100vw - 2rem));
+            pointer-events: none;
+        }
+
+        .flash-toast {
+            pointer-events: auto;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            border-radius: 10px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+            animation: flash-toast-in 0.25s ease;
+        }
+
+        .flash-toast-success { border-left: 4px solid #10b981; }
+        .flash-toast-error { border-left: 4px solid #ef4444; }
+        .flash-toast-warning { border-left: 4px solid #f59e0b; }
+        .flash-toast-info { border-left: 4px solid #3b82f6; }
+
+        .flash-toast-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 0.1rem; }
+        .flash-toast-body { flex: 1; font-size: 0.9rem; color: #334155; line-height: 1.4; }
+        .flash-toast-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        @keyframes flash-toast-in {
+            from { opacity: 0; transform: translateX(1rem); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        turbo-frame#chat-panel {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -853,17 +1160,94 @@
     <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <!-- Header -->
+    @php
+        $headerTitle = match (true) {
+            request()->routeIs('dashboard', 'tenant.dashboard') => 'Dashboard',
+            request()->routeIs('contacts.*') => 'Contacts',
+            request()->routeIs('messages.*') => 'Messages',
+            request()->routeIs('campaigns.*') => 'Campaigns',
+            request()->routeIs('wallet.*') => 'Wallet',
+            request()->routeIs('admin.senders.*') => 'Senders',
+            request()->routeIs('admin.payments.*') => 'Payments',
+            request()->routeIs('admin.admins.*') => 'Admins',
+            request()->routeIs('inbox.*') => 'Inbox',
+            request()->routeIs('templates.*') => 'Templates',
+            request()->routeIs('analytics.*') => 'Analytics',
+            request()->routeIs('settings.*') => 'Settings',
+            request()->routeIs('notifications.*') => 'Notifications',
+            request()->routeIs('search.*') => 'Search',
+            request()->routeIs('api-monitor.*') => 'API Monitor',
+            request()->routeIs('whatsapp.*') => 'WhatsApp',
+            request()->routeIs('tags.*') => 'Tags',
+            request()->routeIs('profile.*') => 'Profile',
+            default => trim($__env->yieldContent('header_title')) ?: 'BulkSMS CRM',
+        };
+    @endphp
     <header class="main-header">
         <div class="header-left">
-            <button class="mobile-menu-btn" id="menuToggle">
+            <button class="mobile-menu-btn" id="menuToggle" type="button" aria-label="Open menu">
                 <i class="bi bi-list"></i>
             </button>
+            <h1 class="header-page-title d-none d-sm-block">{{ $headerTitle }}</h1>
         </div>
+
+        <div class="header-center">
+            <button type="button" class="search-trigger-btn" id="searchTrigger" aria-label="Open search">
+                <i class="bi bi-search search-trigger-icon"></i>
+                <span class="d-none d-md-inline">Search contacts, messages, campaigns, pages…</span>
+                <span class="d-md-none">Search…</span>
+                <span class="search-trigger-kbd d-none d-lg-flex">
+                    <kbd>Ctrl</kbd><kbd>K</kbd>
+                </span>
+            </button>
+        </div>
+
         <div class="header-right">
+            <a href="{{ route('home') }}" target="_blank" rel="noopener" class="header-action-btn d-none d-md-inline-flex" title="View public website">
+                <i class="bi bi-box-arrow-up-right"></i>
+                <span>Website</span>
+            </a>
+            <a href="{{ route('campaigns.create') }}" class="header-action-btn d-none d-lg-inline-flex" title="Create new campaign" data-turbo-frame="main-content" data-turbo-action="advance">
+                <i class="bi bi-plus-lg"></i>
+                <span>Campaign</span>
+            </a>
+            <a href="{{ route('wallet.index') }}" class="header-action-btn d-none d-xl-inline-flex" title="Wallet" data-turbo-frame="main-content" data-turbo-action="advance">
+                <i class="bi bi-wallet2"></i>
+                <span>Wallet</span>
+            </a>
+
+            <button type="button" class="header-search-mobile-btn" id="searchTriggerMobile" aria-label="Search">
+                <i class="bi bi-search"></i>
+            </button>
+
             <div class="header-search">
                 <i class="bi bi-search"></i>
                 <input type="text" id="globalSearch" placeholder="Search..." class="form-control" autocomplete="off">
                 <div class="search-results-dropdown" id="searchResults" style="display: none;"></div>
+            </div>
+            <div class="dropdown">
+                <div class="header-notifications" data-bs-toggle="dropdown" aria-expanded="false" id="moneyBell" title="Money movement">
+                    <i class="bi bi-cash-coin notification-icon money-icon"></i>
+                    <span class="notification-badge" id="moneyAlertCount" style="display: none; background: #059669;">0</span>
+                </div>
+                <div class="dropdown-menu dropdown-menu-end notification-dropdown" style="width: 400px; max-height: 520px; overflow-y: auto;">
+                    <div class="notification-header">
+                        <h6 class="mb-0"><i class="bi bi-cash-coin me-1 text-success"></i> Money Alerts</h6>
+                        <button type="button" class="btn btn-sm btn-link" onclick="markAllMoneyAlertsRead()">Mark all read</button>
+                    </div>
+                    <div id="moneyAlertList">
+                        <div class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-success" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="search-view-all">
+                        <a href="{{ auth()->user()?->isAdmin() ? route('admin.payments.index') : route('wallet.index') }}">
+                            View all payments <i class="bi bi-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
             </div>
             <div class="dropdown">
                 <div class="header-notifications" data-bs-toggle="dropdown" aria-expanded="false" id="notificationBell">
@@ -910,10 +1294,10 @@
                 <ul class="dropdown-menu dropdown-menu-end">
                     @auth
                         <li><a class="dropdown-item" href="{{ route('profile.show') }}"><i class="bi bi-person me-2"></i> Profile</a></li>
-                        <li><a class="dropdown-item" href="{{ route('home') }}"><i class="bi bi-house me-2"></i> Landing Page</a></li>
+                        <li><a class="dropdown-item" href="{{ route('home') }}" target="_blank" rel="noopener"><i class="bi bi-globe me-2"></i> Public Website</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
-                            <form action="{{ route('logout') }}" method="POST">
+                            <form action="{{ route('logout') }}" method="POST" data-turbo="false">
                                 @csrf
                                 <button type="submit" class="dropdown-item">
                                     <i class="bi bi-box-arrow-right me-2"></i> Logout
@@ -929,12 +1313,35 @@
         </div>
     </header>
 
+    <div id="flash-toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Global search palette (Ctrl+K) -->
+    <div class="search-palette-backdrop" id="searchPalette" role="presentation">
+        <div class="search-palette-panel" role="dialog" aria-modal="true" aria-label="Global search">
+            <div class="search-palette-input-wrap">
+                <i class="bi bi-search"></i>
+                <input type="search" id="paletteSearchInput" placeholder="Search contacts, messages, campaigns, pages…" autocomplete="off">
+            </div>
+            <div class="search-palette-results" id="paletteSearchResults">
+                <div class="search-palette-hint">
+                    <i class="bi bi-lightning-charge"></i> Type to search · <kbd>Enter</kbd> for all results · <kbd>Esc</kbd> to close
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Wrapper -->
     <div class="main-wrapper">
         <!-- Main Content -->
     <main class="main-content">
-                    @yield('content')
-        </main>
+        <turbo-frame id="main-content" data-turbo-action="advance">
+            @include('components.flash-payload')
+            @hasSection('page_title')
+                <span data-page-title="@yield('page_title')" class="visually-hidden" aria-hidden="true"></span>
+            @endif
+            @yield('content')
+        </turbo-frame>
+    </main>
 
         <!-- Footer -->
         <footer class="main-footer">
@@ -1240,33 +1647,164 @@
                 .catch(error => console.error('Error:', error));
         }, 30000);
 
-        // Global Search Functionality
-        const searchInput = document.getElementById('globalSearch');
-        const searchResults = document.getElementById('searchResults');
-        let searchTimeout;
+        // Money movement alerts
+        let moneyAlertsLoaded = false;
+        const moneyBell = document.getElementById('moneyBell');
 
-        searchInput?.addEventListener('input', function(e) {
-            const query = e.target.value.trim();
-            
-            clearTimeout(searchTimeout);
-            
-            if (query.length < 2) {
-                searchResults.style.display = 'none';
+        moneyBell?.addEventListener('click', function () {
+            if (!moneyAlertsLoaded) {
+                loadMoneyAlerts();
+                moneyAlertsLoaded = true;
+            }
+        });
+
+        function loadMoneyAlertCount() {
+            fetch('{{ route("money-alerts.unread-count") }}')
+                .then(response => response.json())
+                .then(data => updateMoneyAlertCount(data.count))
+                .catch(error => console.error('Error loading money alert count:', error));
+        }
+
+        function updateMoneyAlertCount(count) {
+            const badge = document.getElementById('moneyAlertCount');
+            const bell = document.getElementById('moneyBell');
+            if (!badge || !bell) return;
+
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.style.display = 'flex';
+                bell.classList.add('has-unread', 'money-bell-pulse');
+            } else {
+                badge.style.display = 'none';
+                bell.classList.remove('has-unread', 'money-bell-pulse');
+            }
+        }
+
+        function loadMoneyAlerts() {
+            fetch('{{ route("money-alerts.list") }}')
+                .then(response => response.json())
+                .then(data => {
+                    const unread = (data.alerts || []).filter(a => a.unread).length;
+                    updateMoneyAlertCount(unread);
+                    displayMoneyAlerts(data.alerts || []);
+                })
+                .catch(error => {
+                    console.error('Error loading money alerts:', error);
+                    document.getElementById('moneyAlertList').innerHTML =
+                        '<div class="notification-empty p-4 text-center"><i class="bi bi-exclamation-triangle display-6 text-muted"></i><p class="mt-2 mb-0">Failed to load money alerts</p></div>';
+                });
+        }
+
+        function displayMoneyAlerts(alerts) {
+            const container = document.getElementById('moneyAlertList');
+            if (!container) return;
+
+            if (alerts.length === 0) {
+                container.innerHTML = '<div class="notification-empty p-4 text-center"><i class="bi bi-cash-stack display-6 text-muted"></i><p class="mt-2 mb-0">No money movement yet</p></div>';
                 return;
             }
 
-            // Show loading state
-            searchResults.style.display = 'block';
-            searchResults.innerHTML = '<div class="search-loading"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+            container.innerHTML = alerts.map(alert => `
+                <div class="notification-item ${alert.unread ? 'unread' : ''}" onclick="window.location.href='${alert.url}'">
+                    <div class="notification-icon-wrapper bg-${alert.color}">
+                        <i class="bi ${alert.icon}"></i>
+                    </div>
+                    <div class="notification-content">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div class="notification-title">${escapeHtml(alert.title)}</div>
+                            <span class="money-alert-amount text-${alert.color}">${escapeHtml(alert.amount_label)}</span>
+                        </div>
+                        <div class="notification-message">${escapeHtml(alert.subtitle)}</div>
+                        <div class="notification-time">${escapeHtml(alert.time)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
 
-            // Debounce search
-            searchTimeout = setTimeout(() => {
-                performSearch(query);
-            }, 300);
+        function markAllMoneyAlertsRead() {
+            fetch('{{ route("money-alerts.mark-read") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    updateMoneyAlertCount(0);
+                    moneyAlertsLoaded = false;
+                    loadMoneyAlerts();
+                    moneyAlertsLoaded = true;
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        loadMoneyAlertCount();
+        setInterval(loadMoneyAlertCount, 30000);
+
+        // Global Search (command palette — jana-prints style)
+        const searchPalette = document.getElementById('searchPalette');
+        const paletteSearchInput = document.getElementById('paletteSearchInput');
+        const paletteSearchResults = document.getElementById('paletteSearchResults');
+        const searchTrigger = document.getElementById('searchTrigger');
+        const searchTriggerMobile = document.getElementById('searchTriggerMobile');
+        const paletteHintHtml = '<div class="search-palette-hint"><i class="bi bi-lightning-charge"></i> Type to search · <kbd>Enter</kbd> for all results · <kbd>Esc</kbd> to close</div>';
+        let searchTimeout;
+
+        function openSearchPalette() {
+            if (!searchPalette) return;
+            searchPalette.classList.add('show');
+            document.body.style.overflow = 'hidden';
+            paletteSearchResults.innerHTML = paletteHintHtml;
+            setTimeout(() => paletteSearchInput?.focus(), 50);
+        }
+
+        function closeSearchPalette() {
+            if (!searchPalette) return;
+            searchPalette.classList.remove('show');
+            document.body.style.overflow = '';
+            if (paletteSearchInput) paletteSearchInput.value = '';
+            paletteSearchResults.innerHTML = paletteHintHtml;
+        }
+
+        searchTrigger?.addEventListener('click', openSearchPalette);
+        searchTriggerMobile?.addEventListener('click', openSearchPalette);
+
+        searchPalette?.addEventListener('click', function (e) {
+            if (e.target === searchPalette) closeSearchPalette();
         });
 
-        // Handle Enter key to go to full results page
-        searchInput?.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                if (searchPalette?.classList.contains('show')) {
+                    closeSearchPalette();
+                } else {
+                    openSearchPalette();
+                }
+            }
+            if (e.key === 'Escape' && searchPalette?.classList.contains('show')) {
+                closeSearchPalette();
+            }
+        });
+
+        paletteSearchInput?.addEventListener('input', function (e) {
+            const query = e.target.value.trim();
+            clearTimeout(searchTimeout);
+
+            if (query.length < 2) {
+                paletteSearchResults.innerHTML = paletteHintHtml;
+                return;
+            }
+
+            paletteSearchResults.innerHTML = '<div class="search-loading p-3 text-center"><div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+            searchTimeout = setTimeout(() => performSearch(query), 300);
+        });
+
+        paletteSearchInput?.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
                 const query = e.target.value.trim();
                 if (query.length >= 2) {
@@ -1275,44 +1813,33 @@
             }
         });
 
-        // Close search results when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!searchInput?.contains(e.target) && !searchResults?.contains(e.target)) {
-                searchResults.style.display = 'none';
-            }
-        });
-
         function performSearch(query) {
             fetch('{{ route("search.api") }}?q=' + encodeURIComponent(query))
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
+                    if (!response.ok) throw new Error('Network response was not ok');
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Search response:', data); // Debug log
                     if (data.success && data.results && data.results.length > 0) {
                         displaySearchResults(data.results, query);
                     } else {
-                        searchResults.innerHTML = '<div class="search-no-results"><i class="bi bi-search display-6"></i><p class="mt-2">No results found for "' + escapeHtml(query) + '"</p></div>';
+                        paletteSearchResults.innerHTML = '<div class="search-no-results p-4 text-center"><i class="bi bi-search display-6 text-muted"></i><p class="mt-2 mb-0">No results found for "' + escapeHtml(query) + '"</p></div>';
                     }
                 })
                 .catch(error => {
                     console.error('Search error:', error);
-                    searchResults.innerHTML = '<div class="search-no-results"><i class="bi bi-exclamation-triangle display-6"></i><p class="mt-2">Error performing search. Check console for details.</p></div>';
+                    paletteSearchResults.innerHTML = '<div class="search-no-results p-4 text-center"><i class="bi bi-exclamation-triangle display-6 text-muted"></i><p class="mt-2 mb-0">Error performing search.</p></div>';
                 });
         }
 
         function displaySearchResults(results, query) {
-            const maxResults = 8;
+            const maxResults = 10;
             const displayResults = results.slice(0, maxResults);
-            
             let html = '';
-            
+
             displayResults.forEach(result => {
                 html += `
-                    <a href="${result.url}" class="search-result-item text-decoration-none">
+                    <a href="${result.url}" class="search-result-item text-decoration-none" onclick="closeSearchPalette()">
                         <div class="search-result-icon">
                             <i class="bi ${result.icon}"></i>
                         </div>
@@ -1324,7 +1851,6 @@
                 `;
             });
 
-            // Add "View all results" link if there are more results
             if (results.length > maxResults) {
                 html += `
                     <div class="search-view-all">
@@ -1335,7 +1861,7 @@
                 `;
             }
 
-            searchResults.innerHTML = html;
+            paletteSearchResults.innerHTML = html;
         }
 
         function escapeHtml(text) {
@@ -1391,6 +1917,8 @@
             });
         }
     </script>
+
+    <script src="{{ asset('js/turbo-bridge.js') }}" defer></script>
     @stack('scripts')
 </body>
 </html>

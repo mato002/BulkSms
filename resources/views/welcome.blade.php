@@ -1605,12 +1605,18 @@
                 <a href="#channels">Channels</a>
                 <a href="#pricing">Pricing</a>
                 <a href="#contact">Contact Us</a>
-                <a href="{{ route('tenant.register') }}" class="btn btn-primary">
-                    <i class="fas fa-user-plus"></i> Sign Up
-                </a>
-                <a href="{{ route('login') }}" class="btn btn-outline">
-                    <i class="fas fa-sign-in-alt"></i> Login
-                </a>
+                @auth
+                    <a href="{{ route('dashboard') }}" class="btn btn-primary">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                @else
+                    <a href="{{ route('tenant.register') }}" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i> Sign Up
+                    </a>
+                    <a href="{{ route('login') }}" class="btn btn-outline">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                @endauth
             </div>
         </div>
     </nav>

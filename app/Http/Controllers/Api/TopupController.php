@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\WalletTransaction;
+use App\Services\WalletCreditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
@@ -12,6 +13,88 @@ use Illuminate\Support\Facades\Response;
 
 class TopupController extends Controller
 {
+    public function __construct(private readonly WalletCreditService $walletCreditService)
+    {
+    }
+
+    /**
+     * Credit a sender's wallet (admin / partner billing — provider mode).
+     * Requires PRADY_TECH (client 1) API key.
+     */
+    public function creditClient(Request $request, int $id)
+    {
+        $validator = Validator::make($request->all(), [
+            'amount' => 'required|numeric|min:0.01|max:1000000',
+            'reference' => 'nullable|string|max:100',
+            'description' => 'nullable|string|max:255',
+            'external_reference' => 'nullable|string|max:100',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $targetClient = Client::find($id);
+        if (!$targetClient) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Client not found',
+            ], 404);
+        }
+
+        try {
+            $reference = $request->reference
+                ?? $request->external_reference
+                ?? WalletTransaction::generateTransactionRef();
+
+            $result = $this->walletCreditService->credit(
+                client: $targetClient,
+                amount: (float) $request->amount,
+                paymentMethod: 'partner',
+                reference: $reference,
+                description: $request->description ?? "Partner credit for {$targetClient->sender_id}",
+                metadata: [
+                    'source' => 'admin_api',
+                    'credited_by_client_id' => $request->user()->id,
+                    'external_reference' => $request->external_reference,
+                ]
+            );
+
+            $transaction = $result['transaction'];
+
+            return response()->json([
+                'status' => 'success',
+                'message' => $result['duplicate'] ?? false
+                    ? 'Credit already applied for this reference'
+                    : 'Balance credited successfully',
+                'data' => [
+                    'client_id' => $targetClient->id,
+                    'sender_id' => $targetClient->sender_id,
+                    'transaction_id' => $transaction->transaction_ref,
+                    'amount' => (float) $transaction->amount,
+                    'old_balance' => $result['old_balance'],
+                    'new_balance' => $result['new_balance'],
+                    'units' => $targetClient->fresh()->getBalanceInUnits(),
+                    'duplicate' => $result['duplicate'] ?? false,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Admin wallet credit failed', [
+                'client_id' => $id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to credit balance: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     /**
      * Initiate a top-up request
      *
@@ -25,7 +108,7 @@ class TopupController extends Controller
 
         // Validate request
         $validator = Validator::make($request->all(), [
-            'amount' => 'required|numeric|min:100|max:50000',
+            'amount' => 'required|numeric|min:10|max:50000',
             'payment_method' => 'required|string|in:mpesa,bank,manual',
             'phone_number' => 'required_if:payment_method,mpesa|string|regex:/^254[0-9]{9}$/',
         ]);
@@ -172,6 +255,7 @@ class TopupController extends Controller
             'mpesa_receipt' => $transaction->mpesa_receipt,
             'created_at' => $transaction->created_at->toISOString(),
             'completed_at' => $transaction->completed_at ? $transaction->completed_at->toISOString() : null,
+            'balance' => $transaction->status === 'completed' ? (float) $client->fresh()->balance : null,
         ]);
     }
 

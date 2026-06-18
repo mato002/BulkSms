@@ -439,11 +439,60 @@
         </div>
     </div>
 
-    <!-- Recent Messages -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-light">
-            <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Messages</h5>
+    <!-- Messages -->
+    <div class="card shadow-sm mb-4" id="messages">
+        <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h5 class="mb-0"><i class="bi bi-envelope-paper me-2"></i>Messages ({{ number_format($stats['total_messages']) }})</h5>
+            <a href="{{ route('messages.all', ['sender' => $client->sender_id]) }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-box-arrow-up-right me-1"></i>All Messages Report
+            </a>
         </div>
+
+        <div class="card-body border-bottom">
+            <form method="GET" action="{{ route('admin.senders.show', $client->id) }}" class="row g-3" data-auto-filter>
+                <div class="col-md-4">
+                    <label class="form-label small text-muted mb-1">Search</label>
+                    <input type="text" name="search" class="form-control form-control-sm" data-auto-filter-search
+                           placeholder="Recipient, body..."
+                           value="{{ request('search') }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted mb-1">Channel</label>
+                    <select name="channel" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        <option value="sms" {{ request('channel') === 'sms' ? 'selected' : '' }}>SMS</option>
+                        <option value="whatsapp" {{ request('channel') === 'whatsapp' ? 'selected' : '' }}>WhatsApp</option>
+                        <option value="email" {{ request('channel') === 'email' ? 'selected' : '' }}>Email</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted mb-1">Status</label>
+                    <select name="status" class="form-select form-select-sm">
+                        <option value="">All</option>
+                        <option value="sent" {{ request('status') === 'sent' ? 'selected' : '' }}>Sent</option>
+                        <option value="delivered" {{ request('status') === 'delivered' ? 'selected' : '' }}>Delivered</option>
+                        <option value="failed" {{ request('status') === 'failed' ? 'selected' : '' }}>Failed</option>
+                        <option value="sending" {{ request('status') === 'sending' ? 'selected' : '' }}>Sending</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted mb-1">From</label>
+                    <input type="date" name="date_from" class="form-control form-control-sm" value="{{ request('date_from') }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted mb-1">To</label>
+                    <input type="date" name="date_to" class="form-control form-control-sm" value="{{ request('date_to') }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small text-muted mb-1">Per page</label>
+                    <x-per-page-select :current="$perPage" class="form-select form-select-sm" />
+                </div>
+                <div class="col-md-10 d-flex align-items-end gap-2">
+                    <a href="{{ route('admin.senders.show', $client->id) }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
@@ -453,14 +502,21 @@
                             <th class="px-4 py-3">Message</th>
                             <th class="px-4 py-3">Channel</th>
                             <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3">Cost</th>
                             <th class="px-4 py-3">Date</th>
+                            <th class="px-4 py-3 text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($recentMessages as $message)
+                        @forelse($messages as $message)
                             <tr>
-                                <td class="px-4 py-3">{{ $message->recipient }}</td>
-                                <td class="px-4 py-3">{{ Str::limit($message->body, 50) }}</td>
+                                <td class="px-4 py-3 font-monospace small">{{ $message->recipient }}</td>
+                                <td class="px-4 py-3">
+                                    <a href="{{ route('messages.show', ['message' => $message->id, 'return' => $returnUrl]) }}"
+                                       class="text-decoration-none text-dark">
+                                        {{ Str::limit($message->body, 50) }}
+                                    </a>
+                                </td>
                                 <td class="px-4 py-3">
                                     <span class="badge bg-secondary">{{ ucfirst($message->channel) }}</span>
                                 </td>
@@ -475,13 +531,26 @@
                                         <span class="badge bg-secondary">{{ ucfirst($message->status) }}</span>
                                     @endif
                                 </td>
+                                <td class="px-4 py-3 small">
+                                    @if(in_array($message->status, ['sent', 'delivered']) && ($message->cost ?? 0) > 0)
+                                        KES {{ number_format($message->cost, 2) }}
+                                    @else
+                                        <span class="text-muted">—</span>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-3 text-muted small">{{ $message->created_at->format('M d, Y H:i') }}</td>
+                                <td class="px-4 py-3 text-end">
+                                    <a href="{{ route('messages.show', ['message' => $message->id, 'return' => $returnUrl]) }}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center py-5">
+                                <td colspan="7" class="text-center py-5">
                                     <i class="bi bi-inbox display-4 text-muted"></i>
-                                    <p class="text-muted mt-2">No messages yet</p>
+                                    <p class="text-muted mt-2">No messages match your filters</p>
                                 </td>
                             </tr>
                         @endforelse
@@ -489,6 +558,10 @@
                 </table>
             </div>
         </div>
+        <x-list-pagination-footer
+            :paginator="$messages"
+            :export-route="route('admin.senders.messages.export', array_merge(['id' => $client->id], request()->query()))"
+        />
     </div>
 
     <!-- Associated Users -->

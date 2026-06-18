@@ -7,8 +7,11 @@ use App\Models\User;
 use App\Models\Message;
 use App\Models\Campaign;
 use App\Models\Notification;
+use App\Models\WalletTransaction;
 use App\Services\OnfonWalletService;
 use App\Mail\WelcomeSenderMail;
+use App\Support\CsvExporter;
+use App\Support\ListFilters;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
@@ -29,10 +32,9 @@ class AdminController extends Controller
 
         $search = $request->get('search');
         $status = $request->get('status');
-        $perPage = $request->get('per_page', 15);
 
         $query = Client::query()
-            ->withCount(['campaigns', 'sms', 'contacts'])
+            ->withCount(['campaigns', 'messages', 'contacts'])
             ->with(['users' => function($q) {
                 $q->select('id', 'name', 'email', 'client_id')->limit(1);
             }]);
@@ -50,7 +52,11 @@ class AdminController extends Controller
             $query->where('status', $status);
         }
 
-        $clients = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        $clients = ListFilters::paginate(
+            $query->orderBy('created_at', 'desc'),
+            $request,
+            25
+        );
 
         // Statistics
         $stats = [
@@ -167,23 +173,50 @@ class AdminController extends Controller
     /**
      * Display the specified sender/tenant
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
         if (!auth()->user()->isAdmin()) {
             abort(403, 'Unauthorized access');
         }
 
         $client = Client::with(['users', 'campaigns', 'contacts'])
-            ->withCount(['campaigns', 'sms', 'contacts'])
+            ->withCount(['campaigns', 'messages', 'contacts'])
             ->findOrFail($id);
 
-        // Get recent messages
-        $recentMessages = Message::where('client_id', $id)
-            ->orderBy('created_at', 'desc')
-            ->limit(10)
-            ->get();
+        $perPage = ListFilters::perPage($request, 25);
 
-        // Get statistics for this client
+        $messagesQuery = Message::where('client_id', $id);
+
+        if ($request->filled('search')) {
+            $search = '%' . $request->search . '%';
+            $messagesQuery->where(function ($q) use ($search) {
+                $q->where('recipient', 'like', $search)
+                    ->orWhere('body', 'like', $search)
+                    ->orWhere('sender', 'like', $search);
+            });
+        }
+
+        if ($request->filled('channel')) {
+            $messagesQuery->where('channel', $request->channel);
+        }
+
+        if ($request->filled('status')) {
+            $messagesQuery->where('status', $request->status);
+        }
+
+        if ($request->filled('date_from')) {
+            $messagesQuery->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $messagesQuery->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $messages = $messagesQuery
+            ->orderByDesc('created_at')
+            ->paginate($perPage)
+            ->withQueryString();
+
         $stats = [
             'total_messages' => Message::where('client_id', $id)->count(),
             'delivered_messages' => Message::where('client_id', $id)->where('status', 'delivered')->count(),
@@ -192,7 +225,12 @@ class AdminController extends Controller
             'total_contacts' => $client->contacts_count,
         ];
 
-        return view('admin.senders.show', compact('client', 'recentMessages', 'stats'));
+        $returnUrl = route('admin.senders.show', $client->id);
+        if ($request->query()) {
+            $returnUrl .= '?' . http_build_query($request->query());
+        }
+
+        return view('admin.senders.show', compact('client', 'messages', 'stats', 'returnUrl', 'perPage'));
     }
 
     /**
@@ -224,6 +262,7 @@ class AdminController extends Controller
             'contact' => 'required|string|max:255',
             'sender_id' => 'required|string|max:11|unique:clients,sender_id,' . $id,
             'balance' => 'nullable|numeric|min:0',
+            'price_per_unit' => 'nullable|numeric|min:0.01',
             'status' => 'nullable|boolean',
         ]);
 
@@ -236,19 +275,27 @@ class AdminController extends Controller
         $oldContact = $client->contact;
         $oldSenderId = $client->sender_id;
         $oldStatus = $client->status;
+        $oldPricePerUnit = $client->price_per_unit;
+
+        $settings = $client->settings ?? [];
+        $settings['append_reply_link'] = $request->boolean('append_reply_link');
+        $settings['append_stop_footer'] = $request->boolean('append_stop_footer');
 
         $client->update([
             'name' => $request->name,
             'contact' => $request->contact,
             'sender_id' => strtoupper($request->sender_id),
             'balance' => $request->balance ?? $client->balance,
+            'price_per_unit' => $request->price_per_unit ?? $client->price_per_unit,
             'status' => $request->has('status') ? $request->status : $client->status,
+            'settings' => $settings,
         ]);
 
         // Track changes
         if ($oldName !== $request->name) $changes[] = 'name';
         if ($oldContact !== $request->contact) $changes[] = 'contact';
         if ($oldSenderId !== strtoupper($request->sender_id)) $changes[] = 'sender_id';
+        if ((float) $oldPricePerUnit !== (float) $client->price_per_unit) $changes[] = 'price_per_unit';
         if ($oldStatus != $client->status) {
             try {
                 Notification::senderStatusChanged($client->id, $client->name, $oldStatus, $client->status, auth()->id());
@@ -566,6 +613,148 @@ class AdminController extends Controller
     }
 
     /**
+     * All wallet payments across senders (admin ledger).
+     */
+    public function payments(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $transactions = ListFilters::paginate(
+            $this->buildPaymentsQuery($request),
+            $request,
+            25
+        );
+
+        $senders = Client::orderBy('sender_id')->get(['id', 'sender_id', 'name']);
+
+        $statsQuery = WalletTransaction::query();
+        if ($request->filled('client_id')) {
+            $statsQuery->where('client_id', $request->client_id);
+        }
+
+        $stats = [
+            'credits_today' => (clone $statsQuery)->where('type', 'credit')
+                ->where('status', 'completed')
+                ->whereDate('created_at', today())
+                ->sum('amount'),
+            'credits_month' => (clone $statsQuery)->where('type', 'credit')
+                ->where('status', 'completed')
+                ->whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->sum('amount'),
+            'pending_count' => (clone $statsQuery)->whereIn('status', ['pending', 'processing'])->count(),
+            'total_credits' => (clone $statsQuery)->where('type', 'credit')
+                ->where('status', 'completed')
+                ->sum('amount'),
+        ];
+
+        return view('admin.payments.index', compact('transactions', 'senders', 'stats'));
+    }
+
+    /**
+     * Export all wallet payments as CSV.
+     */
+    public function exportPayments(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $transactions = $this->buildPaymentsQuery($request)->get();
+        $filename = 'all_payments_' . date('Y-m-d') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($transactions) {
+            $file = fopen('php://output', 'w');
+
+            fputcsv($file, [
+                'Date',
+                'Sender ID',
+                'Sender Name',
+                'Transaction ID',
+                'Type',
+                'Source',
+                'Reference',
+                'External Reference',
+                'Description',
+                'Amount (KES)',
+                'Status',
+                'M-Pesa Receipt',
+                'Phone',
+            ]);
+
+            foreach ($transactions as $txn) {
+                fputcsv($file, [
+                    $txn->created_at->format('Y-m-d H:i:s'),
+                    $txn->client?->sender_id ?? 'N/A',
+                    $txn->client?->name ?? 'N/A',
+                    $txn->transaction_ref,
+                    ucfirst($txn->type),
+                    $txn->source_label,
+                    $txn->transaction_ref,
+                    $txn->external_reference ?? '',
+                    $txn->description ?? '',
+                    number_format($txn->amount, 2, '.', ''),
+                    ucfirst($txn->status),
+                    $txn->mpesa_receipt ?? '',
+                    $txn->payment_phone ?? '',
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    private function buildPaymentsQuery(Request $request)
+    {
+        $query = WalletTransaction::with('client')
+            ->orderByDesc('created_at');
+
+        if ($request->filled('client_id')) {
+            $query->where('client_id', $request->client_id);
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('from_date') || $request->filled('to_date')) {
+            $query->dateRange($request->from_date, $request->to_date);
+        }
+
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('transaction_ref', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%")
+                    ->orWhere('mpesa_receipt', 'like', "%{$search}%")
+                    ->orWhere('payment_phone', 'like', "%{$search}%")
+                    ->orWhereHas('client', function ($clientQuery) use ($search) {
+                        $clientQuery->where('sender_id', 'like', "%{$search}%")
+                            ->orWhere('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        return $query;
+    }
+
+    /**
      * Display list of admin users
      */
     public function admins(Request $request)
@@ -575,7 +764,6 @@ class AdminController extends Controller
         }
 
         $search = $request->get('search');
-        $perPage = $request->get('per_page', 15);
 
         $query = User::where('role', 'admin')
             ->where('client_id', 1); // Admin users belong to client_id 1
@@ -587,9 +775,150 @@ class AdminController extends Controller
             });
         }
 
-        $admins = $query->orderBy('created_at', 'desc')->paginate($perPage);
+        $admins = ListFilters::paginate(
+            $query->orderBy('created_at', 'desc'),
+            $request,
+            25
+        );
 
         return view('admin.admins.index', compact('admins'));
+    }
+
+    public function exportSenders(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $query = Client::query()->withCount(['campaigns', 'messages', 'contacts']);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('contact', 'like', "%{$search}%")
+                    ->orWhere('sender_id', 'like', "%{$search}%")
+                    ->orWhere('api_key', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('status') && $request->status !== '') {
+            $query->where('status', $request->status);
+        }
+
+        $rows = $query->orderBy('created_at', 'desc')->get();
+
+        return CsvExporter::download(
+            'senders_' . date('Y-m-d') . '.csv',
+            ['ID', 'Name', 'Sender ID', 'Contact', 'Balance', 'Price/Unit', 'Status', 'Messages', 'Campaigns', 'Contacts', 'Created At'],
+            function () use ($rows) {
+                foreach ($rows as $client) {
+                    yield [
+                        $client->id,
+                        $client->name,
+                        $client->sender_id,
+                        $client->contact,
+                        number_format($client->balance ?? 0, 2, '.', ''),
+                        number_format($client->price_per_unit ?? 0, 2, '.', ''),
+                        $client->status ? 'Active' : 'Inactive',
+                        $client->messages_count ?? 0,
+                        $client->campaigns_count ?? 0,
+                        $client->contacts_count ?? 0,
+                        $client->created_at,
+                    ];
+                }
+            }
+        );
+    }
+
+    public function exportClientMessages(Request $request, $id)
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        Client::findOrFail($id);
+
+        $messagesQuery = Message::where('client_id', $id);
+
+        if ($request->filled('search')) {
+            $search = '%' . $request->search . '%';
+            $messagesQuery->where(function ($q) use ($search) {
+                $q->where('recipient', 'like', $search)
+                    ->orWhere('body', 'like', $search)
+                    ->orWhere('sender', 'like', $search);
+            });
+        }
+
+        if ($request->filled('channel')) {
+            $messagesQuery->where('channel', $request->channel);
+        }
+
+        if ($request->filled('status')) {
+            $messagesQuery->where('status', $request->status);
+        }
+
+        if ($request->filled('date_from')) {
+            $messagesQuery->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $messagesQuery->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        $rows = $messagesQuery->orderByDesc('created_at')->limit(10000)->get();
+
+        return CsvExporter::download(
+            'sender_messages_' . $id . '_' . date('Y-m-d') . '.csv',
+            ['Date', 'Recipient', 'Sender', 'Channel', 'Status', 'Cost (KES)', 'Body'],
+            function () use ($rows) {
+                foreach ($rows as $message) {
+                    yield [
+                        $message->created_at,
+                        $message->recipient,
+                        $message->sender,
+                        $message->channel,
+                        $message->status,
+                        number_format($message->cost ?? 0, 2, '.', ''),
+                        $message->body,
+                    ];
+                }
+            }
+        );
+    }
+
+    public function exportAdmins(Request $request)
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $query = User::where('role', 'admin')->where('client_id', 1);
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        $rows = $query->orderBy('created_at', 'desc')->get();
+
+        return CsvExporter::download(
+            'admins_' . date('Y-m-d') . '.csv',
+            ['ID', 'Name', 'Email', 'Created At'],
+            function () use ($rows) {
+                foreach ($rows as $admin) {
+                    yield [
+                        $admin->id,
+                        $admin->name,
+                        $admin->email,
+                        $admin->created_at,
+                    ];
+                }
+            }
+        );
     }
 
     /**

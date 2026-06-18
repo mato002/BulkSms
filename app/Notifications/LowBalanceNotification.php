@@ -33,15 +33,16 @@ class LowBalanceNotification extends Notification implements ShouldQueue
     {
         $settings = $notifiable->client->notificationSettings ?? null;
         
-        $channels = ['database']; // Always store in database
-        
+        $channels = [];
+
         if ($settings) {
             if ($settings->notify_via_email) {
                 $channels[] = 'mail';
             }
-            // SMS could be added here if enabled
+        } else {
+            $channels[] = 'mail';
         }
-        
+
         return $channels;
     }
 

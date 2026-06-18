@@ -2,20 +2,76 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\CsvExporter;
+use App\Support\ListFilters;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class TemplateController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $clientId = session('client_id', 1);
-        $templates = DB::table('templates')
-            ->where('client_id', $clientId)
-            ->orderBy('id', 'desc')
-            ->paginate(20);
+        $query = DB::table('templates')->where('client_id', $clientId);
+
+        if ($request->filled('search')) {
+            $search = '%' . $request->search . '%';
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', $search)
+                    ->orWhere('body', 'like', $search)
+                    ->orWhere('subject', 'like', $search);
+            });
+        }
+
+        if ($request->filled('channel')) {
+            $query->where('channel', $request->channel);
+        }
+
+        $templates = ListFilters::paginate(
+            $query->orderBy('id', 'desc'),
+            $request,
+            25
+        );
 
         return view('templates.index', compact('templates'));
+    }
+
+    public function export(Request $request)
+    {
+        $clientId = session('client_id', 1);
+        $query = DB::table('templates')->where('client_id', $clientId);
+
+        if ($request->filled('search')) {
+            $search = '%' . $request->search . '%';
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', $search)
+                    ->orWhere('body', 'like', $search)
+                    ->orWhere('subject', 'like', $search);
+            });
+        }
+
+        if ($request->filled('channel')) {
+            $query->where('channel', $request->channel);
+        }
+
+        $rows = $query->orderBy('id', 'desc')->get();
+
+        return CsvExporter::download(
+            'templates_' . date('Y-m-d') . '.csv',
+            ['ID', 'Name', 'Channel', 'Subject', 'Body', 'Created At'],
+            function () use ($rows) {
+                foreach ($rows as $template) {
+                    yield [
+                        $template->id,
+                        $template->name,
+                        $template->channel,
+                        $template->subject ?? '',
+                        $template->body,
+                        $template->created_at,
+                    ];
+                }
+            }
+        );
     }
 
     public function create()

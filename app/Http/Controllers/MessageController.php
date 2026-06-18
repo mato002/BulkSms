@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\CsvExporter;
+use App\Support\ListFilters;
+use App\Services\SmsSegmenter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -11,7 +14,6 @@ class MessageController extends Controller
     {
         $clientId = auth()->user()->client_id ?? session('client_id', 1);
 
-        // Conversation-first summary
         $query = DB::table('conversations')
             ->leftJoin('contacts', 'conversations.contact_id', '=', 'contacts.id')
             ->select(
@@ -44,27 +46,39 @@ class MessageController extends Controller
             });
         }
 
-        $conversations = $query->orderByDesc('conversations.last_message_at')
-            ->orderByDesc('conversations.id')
-            ->paginate(25)
-            ->withQueryString();
+        $conversations = ListFilters::paginate(
+            $query->orderByDesc('conversations.last_message_at')->orderByDesc('conversations.id'),
+            $request,
+            25
+        );
 
         return view('messages.index', compact('conversations'));
     }
 
-    public function show(string $id)
+    public function show(Request $request, string $id)
     {
-        $clientId = session('client_id', 1);
-        $message = DB::table('messages')
-            ->where('client_id', $clientId)
-            ->where('id', $id)
-            ->first();
+        $query = DB::table('messages')->where('id', $id);
+
+        if (!auth()->user()->isAdmin()) {
+            $clientId = auth()->user()->client_id ?? session('client_id', 1);
+            $query->where('client_id', $clientId);
+        }
+
+        $message = $query->first();
 
         if (!$message) {
             abort(404);
         }
 
-        return view('messages.show', compact('message'));
+        $segments = null;
+        if ($message->channel === 'sms' && filled($message->body)) {
+            $segments = SmsSegmenter::segmentInfo($message->body);
+        }
+
+        $client = DB::table('clients')->where('id', $message->client_id)->first();
+        $returnUrl = $request->query('return');
+
+        return view('messages.show', compact('message', 'segments', 'client', 'returnUrl'));
     }
 
     /**
@@ -73,12 +87,8 @@ class MessageController extends Controller
     public function allMessages(Request $request)
     {
         $clientId = auth()->user()->client_id ?? session('client_id', 1);
-
-        // Determine scope: all tenants (admin + view_all) or current tenant
-        // Admins see ALL tenants by default. Use ?view_all=0 to scope to current tenant.
         $isViewingAll = auth()->check() && auth()->user()->isAdmin() && ($request->get('view_all', '1') !== '0');
 
-        // Build authoritative sender list from clients.sender_id
         $clientSendersQuery = DB::table('clients')
             ->whereNotNull('sender_id')
             ->where('sender_id', '!=', '');
@@ -93,32 +103,131 @@ class MessageController extends Controller
             ->sort()
             ->values();
 
-        // Build the query for messages
-        $query = DB::table('messages')
-            ->select('messages.*');
-        
-        // Filter by client unless viewing all
+        [$query, $statsQuery] = $this->buildAllMessagesQueries($request, $clientId, $isViewingAll);
+
+        $stats = [
+            'total_messages' => $statsQuery->count(),
+            'sent' => (clone $statsQuery)->whereIn('status', ['sent', 'delivered'])->count(),
+            'failed' => (clone $statsQuery)->where('status', 'failed')->count(),
+            'pending' => (clone $statsQuery)->whereIn('status', ['queued', 'sending'])->count(),
+            'total_cost' => (clone $statsQuery)->whereIn('status', ['sent', 'delivered'])->sum('cost'),
+        ];
+
+        $messages = ListFilters::paginate(
+            $query->orderByDesc('messages.created_at'),
+            $request,
+            25
+        );
+
+        $senderAnalytics = $this->buildSenderAnalytics($request, $clientId, $isViewingAll);
+
+        return view('messages.all', compact('messages', 'senders', 'stats', 'senderAnalytics'));
+    }
+
+    public function exportAll(Request $request)
+    {
+        $clientId = auth()->user()->client_id ?? session('client_id', 1);
+        $isViewingAll = auth()->check() && auth()->user()->isAdmin() && ($request->get('view_all', '1') !== '0');
+
+        [$query] = $this->buildAllMessagesQueries($request, $clientId, $isViewingAll);
+        $rows = $query->orderByDesc('messages.created_at')->limit(10000)->get();
+
+        return CsvExporter::download(
+            'messages_' . date('Y-m-d') . '.csv',
+            ['Date', 'Sender', 'Recipient', 'Channel', 'Status', 'Cost (KES)', 'Body'],
+            function () use ($rows) {
+                foreach ($rows as $message) {
+                    yield [
+                        $message->created_at,
+                        $message->sender ?? '',
+                        $message->recipient ?? '',
+                        $message->channel ?? '',
+                        $message->status ?? '',
+                        number_format($message->cost ?? 0, 2, '.', ''),
+                        $message->body ?? '',
+                    ];
+                }
+            }
+        );
+    }
+
+    public function exportConversations(Request $request)
+    {
+        $clientId = auth()->user()->client_id ?? session('client_id', 1);
+
+        $query = DB::table('conversations')
+            ->leftJoin('contacts', 'conversations.contact_id', '=', 'contacts.id')
+            ->select(
+                'conversations.id',
+                'contacts.name as contact_name',
+                'contacts.contact as contact_phone',
+                'conversations.channel',
+                'conversations.status',
+                'conversations.unread_count',
+                'conversations.last_message_preview',
+                'conversations.last_message_at'
+            )
+            ->where('conversations.client_id', $clientId);
+
+        if ($request->filled('channel')) {
+            $query->where('conversations.channel', $request->channel);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('conversations.status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $search = '%'.$request->search.'%';
+            $query->where(function ($q) use ($search) {
+                $q->where('contacts.name', 'like', $search)
+                  ->orWhere('contacts.contact', 'like', $search)
+                  ->orWhere('conversations.last_message_preview', 'like', $search);
+            });
+        }
+
+        $rows = $query->orderByDesc('conversations.last_message_at')->get();
+
+        return CsvExporter::download(
+            'conversations_' . date('Y-m-d') . '.csv',
+            ['ID', 'Contact', 'Phone', 'Channel', 'Status', 'Unread', 'Last Message', 'Last Activity'],
+            function () use ($rows) {
+                foreach ($rows as $row) {
+                    yield [
+                        $row->id,
+                        $row->contact_name ?? '',
+                        $row->contact_phone ?? '',
+                        $row->channel ?? '',
+                        $row->status ?? '',
+                        $row->unread_count ?? 0,
+                        $row->last_message_preview ?? '',
+                        $row->last_message_at ?? '',
+                    ];
+                }
+            }
+        );
+    }
+
+    private function buildAllMessagesQueries(Request $request, int $clientId, bool $isViewingAll): array
+    {
+        $query = DB::table('messages')->select('messages.*');
+
         if (!$isViewingAll) {
             $query->where('messages.client_id', $clientId);
         }
 
-        // Apply sender filter
         if ($request->filled('sender')) {
-            // Case-insensitive match with clients.sender_id
             $query->whereRaw('LOWER(messages.sender) = LOWER(?)', [$request->sender]);
         }
 
-        // Apply channel filter
         if ($request->filled('channel')) {
             $query->where('messages.channel', $request->channel);
         }
 
-        // Apply status filter
         if ($request->filled('status')) {
             $query->where('messages.status', $request->status);
         }
 
-        // Apply date range filter
         if ($request->filled('date_from')) {
             $query->whereDate('messages.created_at', '>=', $request->date_from);
         }
@@ -127,7 +236,6 @@ class MessageController extends Controller
             $query->whereDate('messages.created_at', '<=', $request->date_to);
         }
 
-        // Apply search filter
         if ($request->filled('search')) {
             $search = '%'.$request->search.'%';
             $query->where(function ($q) use ($search) {
@@ -137,24 +245,11 @@ class MessageController extends Controller
             });
         }
 
-        // Clone query for statistics (before pagination)
-        $statsQuery = clone $query;
+        return [$query, clone $query];
+    }
 
-        // Get statistics
-        $stats = [
-            'total_messages' => $statsQuery->count(),
-            'sent' => (clone $statsQuery)->whereIn('status', ['sent', 'delivered'])->count(),
-            'failed' => (clone $statsQuery)->where('status', 'failed')->count(),
-            'pending' => (clone $statsQuery)->whereIn('status', ['queued', 'sending'])->count(),
-            'total_cost' => (clone $statsQuery)->whereIn('status', ['sent', 'delivered'])->sum('cost'),
-        ];
-
-        // Get messages with pagination
-        $messages = $query->orderByDesc('messages.created_at')
-            ->paginate(25)
-            ->withQueryString();
-
-        // Sender analytics sourced from clients, left-joining messages by case-insensitive sender match
+    private function buildSenderAnalytics(Request $request, int $clientId, bool $isViewingAll)
+    {
         $analyticsBase = DB::table('clients')
             ->select('clients.sender_id')
             ->whereNotNull('clients.sender_id')
@@ -166,7 +261,6 @@ class MessageController extends Controller
 
         $analyticsQuery = $analyticsBase
             ->leftJoin('messages', function ($join) use ($clientId, $isViewingAll) {
-                // Join on LOWER(messages.sender) = LOWER(clients.sender_id)
                 $join->on(DB::raw('LOWER(messages.sender)'), '=', DB::raw('LOWER(clients.sender_id)'));
                 if (!$isViewingAll) {
                     $join->where('messages.client_id', $clientId);
@@ -180,7 +274,6 @@ class MessageController extends Controller
                 DB::raw('SUM(CASE WHEN messages.status IN ("sent", "delivered") THEN messages.cost ELSE 0 END) as total_earnings')
             );
 
-        // Apply same filters to the analytics (on messages side)
         if ($request->filled('channel')) {
             $analyticsQuery->where('messages.channel', $request->channel);
         }
@@ -202,18 +295,9 @@ class MessageController extends Controller
             });
         }
 
-        $senderAnalytics = $analyticsQuery
+        return $analyticsQuery
             ->groupBy('clients.sender_id')
             ->orderByDesc('total_messages')
             ->get();
-
-        // Add debug info to help identify any issues
-        $debugInfo = [
-            'total_senders_found' => $senders->count(),
-            'senders_list' => $senders->toArray(),
-            'analytics_count' => $senderAnalytics->count(),
-        ];
-
-        return view('messages.all', compact('messages', 'senders', 'stats', 'senderAnalytics', 'debugInfo'));
     }
 }

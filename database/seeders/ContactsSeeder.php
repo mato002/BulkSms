@@ -23,7 +23,7 @@ class ContactsSeeder extends Seeder
         // Ensure we have at least one client
         $clientId = DB::table('clients')->value('id');
         if (!$clientId) {
-            $this->command->error('No clients found. Please run ClientsSeeder first.');
+            $this->command->error('No clients found. Please run ClientSeeder first.');
             return;
         }
 

@@ -11,9 +11,9 @@ class AdminUserSeeder extends Seeder
     public function run(): void
     {
         $existing = DB::table('users')->where('email', 'admin@bulksms.local')->first();
-        
+
         if ($existing) {
-            return; // Already exists
+            return;
         }
 
         DB::table('users')->insert([
@@ -28,4 +28,3 @@ class AdminUserSeeder extends Seeder
         ]);
     }
 }
-

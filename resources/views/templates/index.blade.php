@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('page_title', 'Message Templates')
+
 @section('content')
 <div class="modern-page-container">
     <!-- Page Header -->
@@ -28,6 +30,7 @@
         </div>
     @endif
 
+    <x-list-results-frame>
     <!-- Stats Cards -->
     <div class="stats-grid mb-4">
         <div class="stat-card-modern">
@@ -76,9 +79,9 @@
             </h3>
         </div>
         <div class="modern-card-body">
-            <form method="GET" class="modern-filter-form">
+            <form method="GET" class="modern-filter-form" data-auto-filter data-turbo-frame="main-content">
                 <div class="filter-group">
-                    <input type="text" name="search" class="modern-input" value="{{ request('search') }}" placeholder="Search by name or content...">
+                    <input type="text" name="search" class="modern-input" data-auto-filter-search value="{{ request('search') }}" placeholder="Search by name or content...">
                 </div>
                 <div class="filter-group">
                     <select name="channel" class="modern-select">
@@ -88,12 +91,11 @@
                         <option value="email" {{ request('channel')==='email' ? 'selected' : '' }}>✉️ Email</option>
                     </select>
                 </div>
+                <div class="filter-group">
+                    <x-per-page-select :current="request('per_page', 25)" class="modern-select" />
+                </div>
                 <div class="filter-actions">
-                    <button class="btn-primary-modern" type="submit">
-                        <i class="bi bi-search"></i>
-                        <span>Search</span>
-                    </button>
-                    <a href="{{ route('templates.index') }}" class="btn-secondary-modern">
+                    <a href="{{ route('templates.index') }}" class="btn-secondary-modern" data-turbo-frame="main-content">
                         <i class="bi bi-x-circle"></i>
                         <span>Clear</span>
                     </a>
@@ -184,12 +186,12 @@
                 </table>
             </div>
         </div>
-        @if($templates->hasPages())
-        <div class="modern-card-footer">
-            {{ $templates->links('vendor.pagination.simple') }}
-        </div>
-        @endif
+        <x-list-pagination-footer
+            :paginator="$templates"
+            :export-route="route('templates.export', request()->query())"
+        />
     </div>
+    </x-list-results-frame>
 </div>
 
 <style>

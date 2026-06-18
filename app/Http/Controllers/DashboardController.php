@@ -70,6 +70,11 @@ class DashboardController extends Controller
             $stats['active_clients'] = Client::where('status', true)->count();
             $stats['total_users'] = DB::table('users')->count();
             $stats['total_channels'] = Channel::count();
+            $stats['total_wallet_balance'] = (float) Client::sum('balance');
+            $stats['total_balance_units'] = (float) (Client::selectRaw(
+                'COALESCE(SUM(CASE WHEN price_per_unit > 0 THEN balance / price_per_unit ELSE 0 END), 0) as total_units'
+            )->value('total_units') ?? 0);
+            $stats['total_spent_all_senders'] = (float) DB::table('messages')->sum('cost');
         }
 
         // Messages by channel (including WhatsApp)

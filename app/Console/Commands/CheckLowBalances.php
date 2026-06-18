@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Client;
+use App\Models\Notification as CustomNotification;
 use App\Models\User;
 use App\Models\NotificationSetting;
 use App\Notifications\LowBalanceNotification;
@@ -60,8 +61,8 @@ class CheckLowBalances extends Command
                 foreach ($users as $user) {
                     try {
                         // Check if already notified recently (within 24 hours)
-                        $recentNotification = $user->notifications()
-                            ->where('type', LowBalanceNotification::class)
+                        $recentNotification = CustomNotification::where('user_id', $user->id)
+                            ->where('type', 'low_balance')
                             ->where('created_at', '>', now()->subHours(24))
                             ->first();
 

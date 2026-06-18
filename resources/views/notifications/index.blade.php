@@ -2,6 +2,8 @@
 
 @section('title', 'Notifications')
 
+@section('page_title', 'Notifications')
+
 @section('content')
 <div class="container-fluid mt-4">
     <div class="row">
@@ -41,8 +43,32 @@
     <div class="tab-content" id="notificationTabsContent">
         <!-- Notifications Tab -->
         <div class="tab-pane fade show active" id="notifications" role="tabpanel">
+            <x-list-results-frame>
             <div class="row">
                 <div class="col-lg-8">
+            <div class="card shadow-sm mb-3">
+                <div class="card-body">
+                    <form method="GET" action="{{ route('notifications.index') }}" class="row g-2" data-auto-filter data-turbo-frame="main-content">
+                        <div class="col-md-4">
+                            <input type="text" name="search" class="form-control form-control-sm" data-auto-filter-search
+                                   placeholder="Search title or message..." value="{{ request('search') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <select name="read" class="form-select form-select-sm">
+                                <option value="">All</option>
+                                <option value="unread" {{ request('read') === 'unread' ? 'selected' : '' }}>Unread</option>
+                                <option value="read" {{ request('read') === 'read' ? 'selected' : '' }}>Read</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <x-per-page-select :current="request('per_page', 25)" class="form-select form-select-sm" />
+                        </div>
+                        <div class="col-md-3 d-flex gap-2">
+                            <a href="{{ route('notifications.index') }}" class="btn btn-sm btn-outline-secondary" data-turbo-frame="main-content">Clear</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
             <div class="card shadow-sm">
                 <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 fw-bold">
@@ -129,9 +155,10 @@
                         </div>
                         
                         <!-- Pagination -->
-                        <div class="card-footer bg-white">
-                            {{ $notifications->links('vendor.pagination.simple') }}
-                        </div>
+                        <x-list-pagination-footer
+                            :paginator="$notifications"
+                            :export-route="route('notifications.export', request()->query())"
+                        />
                     @else
                         <div class="text-center py-5">
                             <div class="mb-4">
@@ -172,6 +199,7 @@
                     </div>
                 </div>
             </div>
+            </x-list-results-frame>
         </div>
 
         <!-- Settings Tab -->

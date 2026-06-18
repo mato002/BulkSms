@@ -228,7 +228,6 @@
                     <div class="mb-3 d-none" id="manualPhoneDiv">
                         <label class="form-label">Enter Phone Number</label>
                         <input type="text" class="form-control" id="manualPhoneInput" placeholder="+254712345678">
-                        <small class="text-muted">Include country code (e.g., +254 for Kenya)</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Message</label>

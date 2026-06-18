@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('page_title', 'Dashboard')
+
 @section('content')
 <div class="dashboard-container">
     <!-- Page Header -->
@@ -72,29 +74,44 @@
         </div>
     </div>
 
-    <!-- Wallet & Balance Cards (if client has balance tracking) -->
-    @if($currentClient && $currentClient->balance !== null)
+    <!-- Wallet & Balance Cards -->
+    @if($isAdmin || ($currentClient && $currentClient->balance !== null))
     <div class="row g-3 mb-4">
         <div class="col-12 col-sm-6 col-lg-3">
-            <div class="stat-card stat-card-success" style="cursor: pointer;" onclick="window.location='{{ route('wallet.index') }}'">
+            <div class="stat-card stat-card-success" style="cursor: pointer;" onclick="window.location='{{ $isAdmin ? route('admin.senders.index') : route('wallet.index') }}'">
                 <div class="stat-icon">
                     <i class="bi bi-wallet2"></i>
                 </div>
                 <div class="stat-content">
                     <div class="stat-label">
-                        Wallet Balance
-                        @if($currentClient->balance < 100)
-                            <span class="badge bg-warning" title="Low balance">
-                                <i class="bi bi-exclamation-triangle"></i>
-                            </span>
+                        @if($isAdmin)
+                            Total Wallet Balance
+                        @else
+                            Wallet Balance
+                            @if($currentClient->balance < 100)
+                                <span class="badge bg-warning" title="Low balance">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                </span>
+                            @endif
                         @endif
                     </div>
-                    <div class="stat-value text-break">KSh {{ number_format($stats['local_balance'], 2) }}</div>
+                    <div class="stat-value text-break">
+                        KSh {{ number_format($isAdmin ? $stats['total_wallet_balance'] : $stats['local_balance'], 2) }}
+                    </div>
                     <div class="stat-footer d-flex justify-content-between align-items-center flex-wrap">
-                        <span class="text-muted">{{ number_format($stats['balance_units'], 2) }} units</span>
-                        <a href="{{ route('wallet.topup') }}" class="btn btn-sm btn-success" onclick="event.stopPropagation()">
-                            <i class="bi bi-plus-circle"></i> Top Up
-                        </a>
+                        @if($isAdmin)
+                            <span class="text-muted">
+                                {{ number_format($stats['total_balance_units'], 2) }} units · {{ $stats['total_clients'] }} senders
+                            </span>
+                            <a href="{{ route('admin.payments.index') }}" class="btn btn-sm btn-outline-success" onclick="event.stopPropagation()">
+                                <i class="bi bi-list-ul"></i> Payments
+                            </a>
+                        @else
+                            <span class="text-muted">{{ number_format($stats['balance_units'], 2) }} units</span>
+                            <a href="{{ route('wallet.topup') }}" class="btn btn-sm btn-success" onclick="event.stopPropagation()">
+                                <i class="bi bi-plus-circle"></i> Top Up
+                            </a>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -163,9 +180,17 @@
                 </div>
                 <div class="stat-content">
                     <div class="stat-label">Total Spent</div>
-                    <div class="stat-value text-break">KSh {{ number_format($stats['total_cost'], 2) }}</div>
+                    <div class="stat-value text-break">
+                        KSh {{ number_format($isAdmin ? $stats['total_spent_all_senders'] : $stats['total_cost'], 2) }}
+                    </div>
                     <div class="stat-footer d-flex justify-content-between align-items-center flex-wrap">
-                        <span class="text-muted text-break">All time</span>
+                        <span class="text-muted text-break">
+                            @if($isAdmin)
+                                All senders · all time
+                            @else
+                                All time
+                            @endif
+                        </span>
                     </div>
                 </div>
             </div>
@@ -1438,8 +1463,8 @@
     }
 </style>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" data-turbo-eval></script>
+<script data-turbo-eval>
     // Activity Chart
     const activityCtx = document.getElementById('activityChart');
     if (activityCtx) {

@@ -89,8 +89,8 @@
                             <!-- Quick Amount Buttons -->
                             <div class="row g-2 mb-3">
                                 <div class="col-6 col-md-3">
-                                    <button type="button" class="btn btn-outline-primary w-100 amount-btn" data-amount="100">
-                                        KES 100
+                                    <button type="button" class="btn btn-outline-primary w-100 amount-btn" data-amount="10">
+                                        KES 10
                                     </button>
                                 </div>
                                 <div class="col-6 col-md-3">
@@ -117,9 +117,9 @@
                                        class="form-control @error('amount') is-invalid @enderror" 
                                        id="amount" 
                                        name="amount" 
-                                       min="100" 
+                                       min="10" 
                                        max="50000" 
-                                       step="10"
+                                       step="1"
                                        placeholder="Enter custom amount"
                                        value="{{ old('amount') }}"
                                        required>
@@ -127,7 +127,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <small class="text-muted">Minimum: KES 100 | Maximum: KES 50,000</small>
+                            <small class="text-muted">Minimum: KES 10 | Maximum: KES 50,000</small>
                             
                             <!-- SMS Units Preview -->
                             <div id="unitsPreview" class="alert alert-info mt-3 d-none">
@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update units preview
     function updateUnitsPreview(amount) {
-        if (amount && amount >= 100) {
+        if (amount && amount >= 10) {
             const units = Math.floor(amount / unitCost);
             unitsCount.textContent = units.toLocaleString();
             unitsPreview.classList.remove('d-none');

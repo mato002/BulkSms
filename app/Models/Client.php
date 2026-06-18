@@ -68,11 +68,19 @@ class Client extends Model
     }
 
     /**
-     * Get the SMS messages for the client.
+     * Get the SMS messages for the client (legacy sms table).
      */
     public function sms(): HasMany
     {
         return $this->hasMany(Sms::class);
+    }
+
+    /**
+     * Get all messages for the client (unified messages table).
+     */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(Message::class);
     }
 
     /**
@@ -218,5 +226,39 @@ class Client extends Model
     public function getSenderIdAttribute(): string
     {
         return $this->attributes['sender_id'] ?? $this->attributes['company_name'] ?? '';
+    }
+
+    /**
+     * Whether outbound SMS should include the platform reply short link.
+     * Per-message metadata can override via append_reply_link.
+     */
+    public function shouldAppendReplyLink(?array $metadata = null): bool
+    {
+        if ($metadata !== null && array_key_exists('append_reply_link', $metadata)) {
+            return filter_var($metadata['append_reply_link'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        if (is_array($this->settings) && array_key_exists('append_reply_link', $this->settings)) {
+            return filter_var($this->settings['append_reply_link'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        return filter_var(config('sms.append_reply_link', false), FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Whether outbound SMS should include the platform STOP opt-out footer.
+     * Per-message metadata can override via append_stop_footer.
+     */
+    public function shouldAppendStopFooter(?array $metadata = null): bool
+    {
+        if ($metadata !== null && array_key_exists('append_stop_footer', $metadata)) {
+            return filter_var($metadata['append_stop_footer'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        if (is_array($this->settings) && array_key_exists('append_stop_footer', $this->settings)) {
+            return filter_var($this->settings['append_stop_footer'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        return filter_var(config('sms.append_stop_footer', false), FILTER_VALIDATE_BOOLEAN);
     }
 }
