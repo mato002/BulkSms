@@ -13,21 +13,42 @@ class WelcomeSenderMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $client;
-    public $apiDocUrl;
+    public Client $client;
+
+    public string $apiDocUrl;
+
+    public string $loginUrl;
+
+    /** @var array<string, string> */
+    public array $envCredentials;
+
+    /** @var array{name: string, email: string, password: string}|null */
+    public ?array $portalUser;
 
     /**
-     * Create a new message instance.
+     * @param  array<string, string>  $envCredentials
+     * @param  array{name: string, email: string, password: string}|null  $portalUser
      */
-    public function __construct(Client $client)
-    {
+    public function __construct(
+        Client $client,
+        ?string $apiDocUrl = null,
+        ?string $loginUrl = null,
+        array $envCredentials = [],
+        ?array $portalUser = null
+    ) {
         $this->client = $client;
-        $this->apiDocUrl = config('app.url') . '/api-documentation';
+        $this->apiDocUrl = $apiDocUrl ?? rtrim(config('app.url'), '/') . '/api-documentation';
+        $this->loginUrl = $loginUrl ?? rtrim(config('app.url'), '/') . '/login';
+        $this->envCredentials = $envCredentials ?: [
+            'APP_URL' => rtrim(config('app.url'), '/'),
+            'API_URL' => rtrim(config('app.url'), '/') . '/api',
+            'API_KEY' => $client->api_key,
+            'CLIENT_ID' => (string) $client->id,
+            'SENDER_ID' => $client->sender_id,
+        ];
+        $this->portalUser = $portalUser;
     }
 
-    /**
-     * Get the message envelope.
-     */
     public function envelope(): Envelope
     {
         return new Envelope(
@@ -35,9 +56,6 @@ class WelcomeSenderMail extends Mailable
         );
     }
 
-    /**
-     * Get the message content definition.
-     */
     public function content(): Content
     {
         return new Content(
@@ -45,14 +63,8 @@ class WelcomeSenderMail extends Mailable
         );
     }
 
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
-     */
     public function attachments(): array
     {
         return [];
     }
 }
-

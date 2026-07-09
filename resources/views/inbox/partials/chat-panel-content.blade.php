@@ -6,10 +6,10 @@
                 <span>Back</span>
             </a>
             <div class="chat-avatar">
-                {{ strtoupper(substr($conversation->contact_name, 0, 1)) }}
+                {{ strtoupper(substr($conversation->contact_name ?? '?', 0, 1)) }}
             </div>
             <div class="chat-user-info">
-                <h5 class="chat-user-name">{{ $conversation->contact_name }}</h5>
+                <h5 class="chat-user-name">{{ $conversation->contact_name ?: 'Unknown Contact' }}</h5>
                 <small class="chat-user-details">
                     {{ $conversation->contact_phone }}
                     @if($conversation->department)

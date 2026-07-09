@@ -236,7 +236,7 @@
                                         <td>{{ $conversation->contact_phone }}</td>
                                         <td>{{ Str::limit($conversation->last_message_preview, 50) }}</td>
                                         <td>
-                                            <a href="{{ route('inbox.show', $conversation->id) }}" class="btn btn-sm btn-primary">View</a>
+                                            <a href="{{ route('inbox.show', $conversation->id) }}" class="btn btn-sm btn-primary" data-turbo-frame="main-content" data-turbo-action="advance">View</a>
                                         </td>
                                     </tr>
                                     @endforeach

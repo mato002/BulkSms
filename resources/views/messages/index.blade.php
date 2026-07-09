@@ -190,7 +190,7 @@
                                 @endif
                             </td>
                             <td class="text-end">
-                                <a href="{{ route('inbox.show', $c->id) }}" class="btn-action-chat">
+                                <a href="{{ route('inbox.show', $c->id) }}" class="btn-action-chat" data-turbo-frame="main-content" data-turbo-action="advance">
                                     <i class="bi bi-chat-dots"></i>
                                     <span>Open Chat</span>
                                 </a>

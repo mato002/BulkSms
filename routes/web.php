@@ -365,6 +365,7 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::put('/{id}', [AdminController::class, 'update'])->name('update');
         Route::delete('/{id}', [AdminController::class, 'destroy'])->name('destroy');
         Route::post('/{id}/regenerate-api-key', [AdminController::class, 'regenerateApiKey'])->name('regenerate-api-key');
+        Route::post('/{id}/resend-onboarding', [AdminController::class, 'resendOnboarding'])->name('resend-onboarding');
         Route::post('/{id}/update-balance', [AdminController::class, 'updateBalance'])->name('update-balance');
         Route::patch('/{id}/toggle-status', [AdminController::class, 'toggleStatus'])->name('toggle-status');
         

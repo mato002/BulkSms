@@ -131,10 +131,80 @@
         const isFocused = document.activeElement === input;
 
         if (hasDraft || isFocused) {
-            frame.removeAttribute('refresh');
-        } else if (!frame.getAttribute('refresh')) {
-            frame.setAttribute('refresh', 'every 10s');
+            frame.dataset.refreshPaused = 'true';
+        } else {
+            delete frame.dataset.refreshPaused;
         }
+    }
+
+    const chatRefreshTimers = new WeakMap();
+
+    function applyChatPanelHtml(frame, html) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const newFrame = doc.querySelector('turbo-frame#chat-panel');
+        if (!newFrame || !frame.isConnected) {
+            return false;
+        }
+
+        frame.innerHTML = newFrame.innerHTML;
+        scrollChatToBottom(frame);
+        syncChatRefreshState(frame);
+        showFlashFromFrame(frame);
+        initPostForms(frame);
+        initBootstrapInRoot(frame);
+        evaluateFrameScripts(frame);
+        document.dispatchEvent(new CustomEvent('bulksms:frame-load', { detail: { frame } }));
+        return true;
+    }
+
+    function refreshChatPanel(frame) {
+        const url = frame.dataset.panelUrl;
+        if (!url || frame.dataset.refreshPaused === 'true') {
+            return;
+        }
+
+        fetch(url, {
+            headers: {
+                'Turbo-Frame': 'chat-panel',
+                Accept: 'text/html',
+            },
+            credentials: 'same-origin',
+        })
+            .then((response) => {
+                if (!response.ok) {
+                    return null;
+                }
+                return response.text();
+            })
+            .then((html) => {
+                if (html) {
+                    applyChatPanelHtml(frame, html);
+                }
+            })
+            .catch(() => {});
+    }
+
+    function setupChatPanelPolling(frame) {
+        if (frame.id !== 'chat-panel' || !frame.dataset.panelUrl || chatRefreshTimers.has(frame)) {
+            return;
+        }
+
+        const interval = parseInt(frame.dataset.refreshInterval || '10000', 10);
+        const timer = setInterval(() => refreshChatPanel(frame), interval);
+        chatRefreshTimers.set(frame, timer);
+    }
+
+    function initPostForms(root) {
+        root.querySelectorAll('form').forEach((form) => {
+            const method = (form.getAttribute('method') || 'get').toLowerCase();
+            if (method !== 'post') {
+                return;
+            }
+            if (form.dataset.turboFrame || form.dataset.turbo === 'false') {
+                return;
+            }
+            form.setAttribute('data-turbo-frame', '_top');
+        });
     }
 
     function initSidebarTooltips() {
@@ -272,9 +342,11 @@
         if (frame.id === 'chat-panel') {
             scrollChatToBottom(frame);
             syncChatRefreshState(frame);
+            setupChatPanelPolling(frame);
         }
 
         showFlashFromFrame(frame);
+        initPostForms(frame);
         initAutoFilterForms(frame);
         initBootstrapInRoot(frame);
         animateCards(frame);
@@ -295,6 +367,20 @@
         frame.classList.remove('turbo-frame-loading');
     }
 
+    document.addEventListener('turbo:frame-missing', (event) => {
+        const frameId = event.target?.id;
+        if (frameId !== 'main-content' && frameId !== 'chat-panel') {
+            return;
+        }
+
+        event.preventDefault();
+        if (typeof Turbo !== 'undefined' && Turbo.visit) {
+            Turbo.visit(window.location.href, { action: 'replace' });
+        } else {
+            window.location.reload();
+        }
+    });
+
     document.addEventListener('turbo:frame-load', handleFrameLoad);
     document.addEventListener('turbo:frame-request', setFrameLoadingState);
     document.addEventListener('turbo:frame-render', clearFrameLoadingState);
@@ -302,7 +388,7 @@
     document.addEventListener('focusin', (event) => {
         const frame = event.target.closest('turbo-frame#chat-panel');
         if (frame && event.target.matches('.reply-textarea')) {
-            frame.removeAttribute('refresh');
+            frame.dataset.refreshPaused = 'true';
         }
     });
 
@@ -324,8 +410,15 @@
         const mainFrame = document.getElementById('main-content');
         if (mainFrame) {
             showFlashFromFrame(mainFrame);
+            initPostForms(mainFrame);
             initAutoFilterForms(mainFrame);
             initSidebarTooltips();
+        }
+
+        const chatPanel = document.getElementById('chat-panel');
+        if (chatPanel) {
+            scrollChatToBottom(chatPanel);
+            setupChatPanelPolling(chatPanel);
         }
     });
 

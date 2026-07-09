@@ -39,6 +39,29 @@
                 <p><strong>Sender ID:</strong> {{ $client->sender_id }}</p>
             </div>
 
+            <h3>⚙️ Add to Your .env File</h3>
+            <p>Copy these values into your application environment configuration:</p>
+            <div class="code">
+<pre>@foreach ($envCredentials as $key => $value)
+{{ $key }}={{ $value }}
+@endforeach</pre>
+            </div>
+
+            @if (!empty($portalUser))
+            <div class="credentials">
+                <h3>🖥️ Dashboard Login</h3>
+                <p>A portal account was created so you can log in to the web dashboard.</p>
+                <p><strong>Login URL:</strong> <a href="{{ $loginUrl }}">{{ $loginUrl }}</a></p>
+                <p><strong>Email:</strong> {{ $portalUser['email'] }}</p>
+                @if (!empty($portalUser['password']))
+                <p><strong>Password:</strong> <code style="background: #e9ecef; padding: 5px 10px; border-radius: 4px;">{{ $portalUser['password'] }}</code></p>
+                <p style="margin-bottom: 0;"><small>Change your password after your first login.</small></p>
+                @else
+                <p style="margin-bottom: 0;"><small>Use your existing dashboard password. Contact support if you need a reset.</small></p>
+                @endif
+            </div>
+            @endif
+
             <div class="warning">
                 <strong>⚠️ Keep Your API Key Secret!</strong><br>
                 Never share your API key or expose it in client-side code. Treat it like a password.
@@ -83,8 +106,7 @@
             <h3>💡 Need Help?</h3>
             <p>If you have any questions or need assistance integrating our API:</p>
             <ul class="list">
-                <li>📧 Email: <a href="mailto:support@yourplatform.com">support@yourplatform.com</a></li>
-                <li>📞 Phone: +254 XXX XXX XXX</li>
+                <li>📧 Email: <a href="mailto:support@matechtechnologies.com">support@matechtechnologies.com</a></li>
                 <li>🕐 Hours: Monday - Friday, 8am - 6pm EAT</li>
             </ul>
 

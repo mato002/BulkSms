@@ -1,5 +1,7 @@
 @extends('layouts.app')
 
+@section('page_title', 'Add New Sender')
+
 @section('content')
 <div class="container-fluid">
     <!-- Page Header -->
@@ -8,7 +10,7 @@
             <h1 class="mb-1"><i class="bi bi-plus-circle me-2"></i>Add New Sender</h1>
             <p class="text-muted mb-0">Create a new sender/tenant with API credentials</p>
         </div>
-        <a href="{{ route('admin.senders.index') }}" class="btn btn-outline-secondary">
+        <a href="{{ route('admin.senders.index') }}" class="btn btn-outline-secondary" data-turbo-frame="main-content" data-turbo-action="advance">
             <i class="bi bi-arrow-left me-2"></i>Back to Senders
         </a>
     </div>
@@ -18,8 +20,19 @@
         <div class="col-lg-8">
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <form method="POST" action="{{ route('admin.senders.store') }}">
+                    <form method="POST" action="{{ route('admin.senders.store') }}" data-turbo-frame="_top">
                         @csrf
+
+                        @if($errors->any())
+                            <div class="alert alert-danger">
+                                <strong>Please fix the following errors:</strong>
+                                <ul class="mb-0 mt-2">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
 
                         <!-- Sender Information Section -->
                         <h5 class="mb-3">Sender Information</h5>
@@ -223,39 +236,43 @@
                         </div>
 
                         <div id="user-fields" class="{{ old('create_user') ? '' : 'd-none' }}">
+                            <p class="text-muted small mb-3">Fill in all three fields below, or turn the switch off to skip user account creation.</p>
                             <div class="mb-3">
-                                <label for="user_name" class="form-label">User Name</label>
+                                <label for="user_name" class="form-label">User Name <span class="text-danger user-field-required d-none">*</span></label>
                                 <input type="text" 
                                        name="user_name" 
                                        id="user_name" 
                                        value="{{ old('user_name') }}"
                                        class="form-control @error('user_name') is-invalid @enderror"
-                                       placeholder="John Doe">
+                                       placeholder="John Doe"
+                                       {{ old('create_user') ? '' : 'disabled' }}>
                                 @error('user_name')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
 
                             <div class="mb-3">
-                                <label for="user_email" class="form-label">User Email</label>
+                                <label for="user_email" class="form-label">User Email <span class="text-danger user-field-required d-none">*</span></label>
                                 <input type="email" 
                                        name="user_email" 
                                        id="user_email" 
                                        value="{{ old('user_email') }}"
                                        class="form-control @error('user_email') is-invalid @enderror"
-                                       placeholder="user@example.com">
+                                       placeholder="user@example.com"
+                                       {{ old('create_user') ? '' : 'disabled' }}>
                                 @error('user_email')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
 
                             <div class="mb-3">
-                                <label for="user_password" class="form-label">User Password</label>
+                                <label for="user_password" class="form-label">User Password <span class="text-danger user-field-required d-none">*</span></label>
                                 <input type="password" 
                                        name="user_password" 
                                        id="user_password" 
                                        class="form-control @error('user_password') is-invalid @enderror"
-                                       placeholder="Minimum 8 characters">
+                                       placeholder="Minimum 8 characters"
+                                       {{ old('create_user') ? '' : 'disabled' }}>
                                 <div class="form-text">Minimum 8 characters</div>
                                 @error('user_password')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -301,16 +318,40 @@
     </div>
 </div>
 
+@if($errors->any())
+<script data-turbo-eval>
+if (typeof Swal !== 'undefined') {
+    Swal.fire({
+        icon: 'error',
+        title: 'Could not create sender',
+        text: @json(implode("\n", $errors->all())),
+        confirmButtonColor: '#3085d6',
+    });
+}
+</script>
+@endif
+
 @push('scripts')
 <script>
 function toggleUserFields() {
     const checkbox = document.getElementById('create_user');
     const userFields = document.getElementById('user-fields');
-    
+    const inputs = userFields.querySelectorAll('input');
+    const requiredMarkers = document.querySelectorAll('.user-field-required');
+
     if (checkbox.checked) {
         userFields.classList.remove('d-none');
+        inputs.forEach((input) => {
+            input.disabled = false;
+        });
+        requiredMarkers.forEach((el) => el.classList.remove('d-none'));
     } else {
         userFields.classList.add('d-none');
+        inputs.forEach((input) => {
+            input.disabled = true;
+            input.value = '';
+        });
+        requiredMarkers.forEach((el) => el.classList.add('d-none'));
     }
 }
 
@@ -344,6 +385,9 @@ function calculateUnits() {
     }
     preview.textContent = `≈ ${units} units`;
 }
+
+document.addEventListener('DOMContentLoaded', toggleUserFields);
+document.addEventListener('bulksms:frame-load', () => toggleUserFields());
 </script>
 @endpush
 @endsection

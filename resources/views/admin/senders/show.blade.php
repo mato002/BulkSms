@@ -22,11 +22,28 @@
     </div>
 
     <!-- Success/Error Messages -->
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle-fill me-2"></i>{{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
+        <script data-turbo-eval>
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Sender created',
+                text: @json(session('success')),
+                confirmButtonColor: '#3085d6',
+            });
+        }
+        </script>
     @endif
 
     <!-- Overview Cards -->
@@ -247,6 +264,111 @@
                                 <i class="bi bi-arrow-clockwise me-1"></i>Regenerate Key
                             </button>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Integration Setup & Onboarding -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-dark">
+                <div class="card-header bg-dark text-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h5 class="mb-0"><i class="bi bi-plug me-2"></i>Integration Setup &amp; Onboarding</h5>
+                    <a href="{{ $apiDocUrl }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-light">
+                        <i class="bi bi-book me-1"></i>API Documentation
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-lg-6">
+                            <h6 class="text-muted mb-3"><i class="bi bi-whatsapp me-2 text-success"></i>Copy for WhatsApp</h6>
+                            <p class="small text-muted">Copy this message and paste it into WhatsApp to send credentials manually.</p>
+                            <textarea id="whatsapp-message" class="form-control small mb-2" rows="14" readonly>{{ $whatsappMessage }}</textarea>
+                            <button type="button" class="btn btn-sm btn-success" onclick="copyFromElement('whatsapp-message', 'WhatsApp message')">
+                                <i class="bi bi-whatsapp me-1"></i>Copy for WhatsApp
+                            </button>
+
+                            <h6 class="text-muted mb-3 mt-4"><i class="bi bi-file-earmark-code me-2"></i>Copy for .env</h6>
+                            <textarea id="env-block" class="form-control font-monospace small mb-2" rows="6" readonly>{{ $envBlock }}</textarea>
+                            <button type="button" class="btn btn-sm btn-primary" onclick="copyFromElement('env-block', '.env credentials')">
+                                <i class="bi bi-clipboard me-1"></i>Copy .env Block
+                            </button>
+
+                            <h6 class="text-muted mb-3 mt-4"><i class="bi bi-key me-2"></i>Credential Reference</h6>
+                            <table class="table table-sm table-bordered mb-0">
+                                @foreach ($envCredentials as $key => $value)
+                                    <tr>
+                                        <td class="text-muted font-monospace small" width="130">{{ $key }}</td>
+                                        <td class="font-monospace small text-break">{{ $value }}</td>
+                                        <td class="text-end" width="50">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-1"
+                                                    onclick="copyToClipboard(@json($value), '{{ $key }}')">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </table>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <h6 class="text-muted mb-3"><i class="bi bi-terminal me-2"></i>cURL Example</h6>
+                            <textarea id="curl-example" class="form-control font-monospace small mb-2" rows="8" readonly>{{ $curlExample }}</textarea>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="copyFromElement('curl-example', 'cURL example')">
+                                <i class="bi bi-clipboard me-1"></i>Copy cURL
+                            </button>
+
+                            <h6 class="text-muted mb-3 mt-4"><i class="bi bi-send me-2"></i>Send to Client</h6>
+                            <div class="border rounded p-3 bg-light">
+                                <p class="small mb-2">
+                                    <strong>Contact:</strong> {{ $client->contact ?: 'Not set' }}
+                                    @if($client->users->first())
+                                        <br><strong>Portal user:</strong> {{ $client->users->first()->email }}
+                                    @endif
+                                </p>
+
+                                @if(!empty($onboardingMeta['sent_at']))
+                                    <p class="small text-success mb-2">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        Last sent {{ \Carbon\Carbon::parse($onboardingMeta['sent_at'])->diffForHumans() }}
+                                        @if(!empty($onboardingMeta['channels']))
+                                            via {{ implode(' & ', $onboardingMeta['channels']) }}
+                                        @endif
+                                        @if(!empty($onboardingMeta['recipients']))
+                                            to {{ implode(', ', $onboardingMeta['recipients']) }}
+                                        @endif
+                                    </p>
+                                @else
+                                    <p class="small text-warning mb-2">
+                                        <i class="bi bi-exclamation-circle me-1"></i>
+                                        Onboarding has not been sent yet (or this sender existed before tracking was added).
+                                    </p>
+                                @endif
+
+                                <form action="{{ route('admin.senders.resend-onboarding', $client->id) }}" method="POST" data-turbo-frame="_top">
+                                    @csrf
+                                    @if($client->users->first())
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="reset_portal_password" value="1" id="reset_portal_password">
+                                            <label class="form-check-label small" for="reset_portal_password">
+                                                Generate new portal password and include it in the notification
+                                            </label>
+                                        </div>
+                                    @endif
+                                    <button type="submit" class="btn btn-success btn-sm"
+                                            onclick="return confirm(@json(!empty($onboardingMeta['sent_at']) ? 'Resend onboarding credentials to the client?' : 'Send onboarding credentials to the client?'))">
+                                        <i class="bi bi-envelope-paper me-1"></i>
+                                        {{ !empty($onboardingMeta['sent_at']) ? 'Resend Onboarding' : 'Send Onboarding' }}
+                                    </button>
+                                </form>
+                            </div>
+
+                            <p class="small text-muted mt-3 mb-0">
+                                Auto-send by email or SMS using the button above, or copy the WhatsApp message and send it yourself.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -611,24 +733,35 @@
 
 @push('scripts')
 <script>
-function copyToClipboard(text) {
+function copyToClipboard(text, label) {
+    label = label || 'API Key';
     navigator.clipboard.writeText(text).then(function() {
-        const toast = document.createElement('div');
-        toast.className = 'position-fixed top-0 end-0 p-3';
-        toast.style.zIndex = '11';
-        toast.innerHTML = `
-            <div class="toast show" role="alert">
-                <div class="toast-header bg-success text-white">
-                    <i class="bi bi-check-circle-fill me-2"></i>
-                    <strong class="me-auto">Success</strong>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
-                </div>
-                <div class="toast-body">API Key copied to clipboard!</div>
-            </div>
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
+        showCopyToast(label + ' copied to clipboard!');
     });
+}
+
+function copyFromElement(elementId, label) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    copyToClipboard(el.value, label);
+}
+
+function showCopyToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'position-fixed top-0 end-0 p-3';
+    toast.style.zIndex = '11';
+    toast.innerHTML = `
+        <div class="toast show" role="alert">
+            <div class="toast-header bg-success text-white">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong class="me-auto">Success</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body">${message}</div>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 </script>
 @endpush

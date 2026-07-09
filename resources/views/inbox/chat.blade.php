@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
-@section('page_title', $conversation->contact_name)
+@section('page_title', $conversation->contact_name ?: 'Conversation')
 
 @section('content')
 @include('components.modern-page-styles')
 
 <div class="modern-page-container">
     <turbo-frame id="chat-panel"
-                 src="{{ route('inbox.panel', $conversation->id) }}"
-                 refresh="every 10s">
+                 data-panel-url="{{ route('inbox.panel', $conversation->id) }}"
+                 data-refresh-interval="10000">
         @include('inbox.partials.chat-panel-content', compact('conversation', 'messages'))
     </turbo-frame>
 </div>

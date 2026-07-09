@@ -11,12 +11,17 @@ use App\Support\CsvExporter;
 
 class InboxController extends Controller
 {
+    private function resolveClientId(): int
+    {
+        return (int) (auth()->user()->client_id ?? session('client_id', 1));
+    }
+
     /**
      * Show inbox with all conversations
      */
     public function index(Request $request)
     {
-        $clientId = session('client_id', 1);
+        $clientId = $this->resolveClientId();
 
         $query = DB::table('conversations')
             ->join('contacts', 'conversations.contact_id', '=', 'contacts.id')
@@ -62,6 +67,9 @@ class InboxController extends Controller
     public function show($conversationId)
     {
         $data = $this->loadConversation($conversationId);
+        if (isset($data['error'])) {
+            return $this->conversationNotFoundResponse($data['error']);
+        }
 
         return view('inbox.chat', $data);
     }
@@ -72,6 +80,9 @@ class InboxController extends Controller
     public function panel($conversationId)
     {
         $data = $this->loadConversation($conversationId);
+        if (isset($data['error'])) {
+            return $this->conversationNotFoundResponse($data['error'], 'chat-panel');
+        }
 
         return view('inbox.partials.chat-panel-frame', $data);
     }
@@ -81,7 +92,7 @@ class InboxController extends Controller
      */
     private function loadConversation($conversationId): array
     {
-        $clientId = session('client_id', 1);
+        $clientId = $this->resolveClientId();
 
         $conversation = DB::table('conversations')
             ->join('contacts', 'conversations.contact_id', '=', 'contacts.id')
@@ -97,7 +108,7 @@ class InboxController extends Controller
             ->first();
 
         if (!$conversation) {
-            abort(404);
+            return ['error' => 'Conversation not found or you do not have access to it.'];
         }
 
         $messages = DB::table('messages')
@@ -128,6 +139,21 @@ class InboxController extends Controller
         return compact('conversation', 'messages');
     }
 
+    private function conversationNotFoundResponse(string $message, ?string $frame = null)
+    {
+        $turboFrame = $frame ?? request()->header('Turbo-Frame');
+
+        if ($turboFrame === 'chat-panel') {
+            return response()->view('inbox.partials.chat-panel-error', compact('message'));
+        }
+
+        if ($turboFrame === 'main-content') {
+            return response()->view('inbox.partials.chat-not-found', compact('message'));
+        }
+
+        abort(404, $message);
+    }
+
     private function redirectToConversation(int $conversationId, ?string $flashKey = null, ?string $flashMessage = null)
     {
         $route = request()->header('Turbo-Frame') === 'chat-panel'
@@ -152,7 +178,7 @@ class InboxController extends Controller
             'message' => 'required|string',
         ]);
 
-        $clientId = session('client_id', 1);
+        $clientId = $this->resolveClientId();
 
         $conversation = DB::table('conversations')
             ->join('contacts', 'conversations.contact_id', '=', 'contacts.id')
@@ -162,7 +188,7 @@ class InboxController extends Controller
             ->first();
 
         if (!$conversation) {
-            abort(404);
+            return $this->conversationNotFoundResponse('Conversation not found or you do not have access to it.');
         }
 
         // Get client default sender
@@ -229,7 +255,7 @@ class InboxController extends Controller
             'status' => 'required|in:open,resolved,archived',
         ]);
 
-        $clientId = session('client_id', 1);
+        $clientId = $this->resolveClientId();
 
         DB::table('conversations')
             ->where('id', $conversationId)
@@ -247,7 +273,7 @@ class InboxController extends Controller
      */
     public function startWithContact($contactId)
     {
-        $clientId = session('client_id', 1);
+        $clientId = $this->resolveClientId();
 
         // Verify contact belongs to this client
         $contact = DB::table('contacts')
@@ -290,7 +316,7 @@ class InboxController extends Controller
 
     public function export(Request $request)
     {
-        $clientId = session('client_id', 1);
+        $clientId = $this->resolveClientId();
 
         $query = DB::table('conversations')
             ->join('contacts', 'conversations.contact_id', '=', 'contacts.id')

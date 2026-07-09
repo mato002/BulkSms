@@ -9,15 +9,13 @@ use App\Models\Campaign;
 use App\Models\Notification;
 use App\Models\WalletTransaction;
 use App\Services\OnfonWalletService;
-use App\Mail\WelcomeSenderMail;
+use App\Services\SenderOnboardingService;
 use App\Support\CsvExporter;
 use App\Support\ListFilters;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Mail;
-
 class AdminController extends Controller
 {
     /**
@@ -92,20 +90,24 @@ class AdminController extends Controller
             abort(403, 'Unauthorized access');
         }
 
-        $validator = Validator::make($request->all(), [
+        $rules = [
             'name' => 'required|string|max:255',
             'contact' => 'required|string|max:255',
             'sender_id' => 'required|string|max:11|unique:clients,sender_id',
             'company_name' => 'nullable|string|max:255',
             'balance' => 'nullable|numeric|min:0',
             'price_per_unit' => 'nullable|numeric|min:0.01',
-            'status' => 'nullable|boolean',
-            // Optional: Create admin user for this client
+            'status' => 'nullable|in:0,1',
             'create_user' => 'nullable|boolean',
-            'user_name' => 'required_if:create_user,1|string|max:255',
-            'user_email' => 'required_if:create_user,1|email|unique:users,email',
-            'user_password' => 'required_if:create_user,1|string|min:8',
-        ]);
+        ];
+
+        if ($request->boolean('create_user')) {
+            $rules['user_name'] = 'required|string|max:255';
+            $rules['user_email'] = 'required|email|unique:users,email';
+            $rules['user_password'] = 'required|string|min:8';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
@@ -131,13 +133,13 @@ class AdminController extends Controller
             'balance' => $request->balance ?? 0,
             'price_per_unit' => $request->price_per_unit ?? 1.00,
             'api_key' => $this->generateApiKey(),
-            'status' => $request->status ?? true,
+            'status' => $request->boolean('status'),
             'settings' => $settings,
             'auto_sync_balance' => $request->has('auto_sync_balance') && $request->auto_sync_balance,
         ]);
 
-        // Create user for client if requested
-        if ($request->create_user) {
+        $portalUser = null;
+        if ($request->boolean('create_user')) {
             User::create([
                 'name' => $request->user_name,
                 'email' => $request->user_email,
@@ -145,19 +147,15 @@ class AdminController extends Controller
                 'client_id' => $client->id,
                 'role' => 'user',
             ]);
+
+            $portalUser = [
+                'name' => $request->user_name,
+                'email' => $request->user_email,
+                'password' => $request->user_password,
+            ];
         }
 
-        // Send welcome email
-        try {
-            if ($client->contact && filter_var($client->contact, FILTER_VALIDATE_EMAIL)) {
-                Mail::to($client->contact)->send(new WelcomeSenderMail($client));
-            }
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to send welcome email', [
-                'client_id' => $client->id,
-                'error' => $e->getMessage()
-            ]);
-        }
+        $onboarding = app(SenderOnboardingService::class)->notify($client, $portalUser);
 
         // Create notification for sender creation
         try {
@@ -166,8 +164,20 @@ class AdminController extends Controller
             \Log::error('Failed to create sender creation notification', ['error' => $e->getMessage()]);
         }
 
+        $successMessage = 'Sender created successfully! API Key: ' . $client->api_key;
+        if (!empty($onboarding['recipients'])) {
+            $channels = [];
+            if ($onboarding['email']) {
+                $channels[] = 'email';
+            }
+            if ($onboarding['sms']) {
+                $channels[] = 'SMS';
+            }
+            $successMessage .= ' Onboarding details sent via ' . implode(' and ', $channels) . '.';
+        }
+
         return redirect()->route('admin.senders.show', $client->id)
-            ->with('success', 'Sender created successfully! API Key: ' . $client->api_key);
+            ->with('success', $successMessage);
     }
 
     /**
@@ -230,7 +240,73 @@ class AdminController extends Controller
             $returnUrl .= '?' . http_build_query($request->query());
         }
 
-        return view('admin.senders.show', compact('client', 'messages', 'stats', 'returnUrl', 'perPage'));
+        $onboardingService = app(SenderOnboardingService::class);
+        $envCredentials = $onboardingService->envCredentials($client);
+        $envBlock = $onboardingService->envBlock($client);
+        $apiDocUrl = $onboardingService->apiDocumentationUrl();
+        $loginUrl = $onboardingService->loginUrl();
+        $curlExample = $onboardingService->curlExample($client);
+        $onboardingMeta = $onboardingService->onboardingMeta($client);
+        $whatsappMessage = $onboardingService->whatsappMessage(
+            $client,
+            $onboardingService->portalUserForClient($client)
+        );
+
+        return view('admin.senders.show', compact(
+            'client',
+            'messages',
+            'stats',
+            'returnUrl',
+            'perPage',
+            'envCredentials',
+            'envBlock',
+            'apiDocUrl',
+            'loginUrl',
+            'curlExample',
+            'onboardingMeta',
+            'whatsappMessage',
+        ));
+    }
+
+    /**
+     * Resend onboarding credentials to the client's contact.
+     */
+    public function resendOnboarding(Request $request, $id)
+    {
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Unauthorized access');
+        }
+
+        $client = Client::with('users')->findOrFail($id);
+        $onboardingService = app(SenderOnboardingService::class);
+
+        $portalPassword = null;
+        if ($request->boolean('reset_portal_password')) {
+            $user = $client->users->first();
+            if ($user) {
+                $portalPassword = Str::random(12);
+                $user->update(['password' => Hash::make($portalPassword)]);
+            }
+        }
+
+        $portalUser = $onboardingService->portalUserForClient($client, $portalPassword);
+        $result = $onboardingService->notify($client, $portalUser);
+
+        if (empty($result['recipients'])) {
+            return redirect()->route('admin.senders.show', $client->id)
+                ->with('error', 'Could not send onboarding. Ensure the contact is a valid email or phone number, and mail/SMS is configured.');
+        }
+
+        $channels = [];
+        if ($result['email']) {
+            $channels[] = 'email';
+        }
+        if ($result['sms']) {
+            $channels[] = 'SMS';
+        }
+
+        return redirect()->route('admin.senders.show', $client->id)
+            ->with('success', 'Onboarding details sent via ' . implode(' and ', $channels) . ' to ' . implode(', ', $result['recipients']) . '.');
     }
 
     /**

@@ -16,6 +16,9 @@ return [
     'low_balance_threshold' => env('SMS_LOW_BALANCE_THRESHOLD', 1000),
     'admin_phone' => env('SMS_ADMIN_PHONE', '254722295194'),
 
+    // Client billed when sending onboarding credential SMS (defaults to PRADY_TECH)
+    'onboarding_bill_client_id' => env('SMS_ONBOARDING_BILL_CLIENT_ID', 1),
+
     'default_country_code' => env('SMS_DEFAULT_COUNTRY_CODE', '254'),
 
     'gateways' => [
