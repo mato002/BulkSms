@@ -27,7 +27,24 @@ class MessageController extends Controller
                 'metadata' => ['nullable','array'],
                 'append_reply_link' => ['nullable','boolean'],
                 'append_stop_footer' => ['nullable','boolean'],
+                'dry_run' => ['nullable','boolean'],
             ]);
+
+            $client = \App\Models\Client::find($validated['client_id']);
+
+            if ($request->boolean('dry_run')) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Dry run successful — credentials and payload are valid. No message was sent.',
+                    'data' => [
+                        'client_id' => (int) $validated['client_id'],
+                        'channel' => $validated['channel'],
+                        'recipient' => $validated['recipient'],
+                        'sender' => $validated['sender'] ?? $client?->sender_id,
+                        'balance_remaining' => $client ? (float) $client->balance : null,
+                    ],
+                ]);
+            }
 
             $metadata = $validated['metadata'] ?? [];
             if (array_key_exists('append_reply_link', $validated)) {

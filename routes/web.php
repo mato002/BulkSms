@@ -374,6 +374,7 @@ Route::prefix('api')->name('api.')->group(function () {
         Route::post('/{id}/sync-onfon-balance', [AdminController::class, 'syncOnfonBalance'])->name('sync-onfon-balance');
         Route::get('/{id}/onfon-balance', [AdminController::class, 'getOnfonBalance'])->name('onfon-balance');
         Route::post('/{id}/test-onfon', [AdminController::class, 'testOnfonConnection'])->name('test-onfon');
+        Route::post('/{id}/test-api', [AdminController::class, 'testApiConnection'])->name('test-api');
         Route::get('/{id}/onfon-transactions', [AdminController::class, 'getOnfonTransactions'])->name('onfon-transactions');
     });
 

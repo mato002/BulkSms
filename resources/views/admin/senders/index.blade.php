@@ -141,6 +141,7 @@
                             <th class="px-4 py-3">Sender Details</th>
                             <th class="px-4 py-3">API Key</th>
                             <th class="px-4 py-3">Balance (Bulk SMS / Onfon)</th>
+                            <th class="px-4 py-3">Price / SMS</th>
                             <th class="px-4 py-3">Usage</th>
                             <th class="px-4 py-3">Status</th>
                             <th class="px-4 py-3 text-end">Actions</th>
@@ -189,6 +190,10 @@
                                     </div>
                                 </td>
                                 <td class="px-4 py-3">
+                                    <div class="fw-semibold">KES {{ number_format($client->price_per_unit ?? 1, 2) }}</div>
+                                    <div class="text-muted small">per SMS</div>
+                                </td>
+                                <td class="px-4 py-3">
                                     <div>{{ $client->campaigns_count }} campaigns</div>
                                     <div class="text-muted small">{{ number_format($client->messages_count) }} messages</div>
                                 </td>
@@ -201,6 +206,12 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="d-flex gap-2 justify-content-end">
+                                        <button type="button"
+                                                onclick="testSenderApiFromList({{ $client->id }}, this)"
+                                                class="btn btn-sm btn-outline-success"
+                                                title="Test API">
+                                            <i class="bi bi-plug"></i>
+                                        </button>
                                         <a href="{{ route('admin.senders.show', $client->id) }}" 
                                            class="btn btn-sm btn-outline-primary" 
                                            title="View">
@@ -232,7 +243,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center py-5">
+                                <td colspan="7" class="text-center py-5">
                                     <i class="bi bi-inbox display-4 text-muted"></i>
                                     <p class="text-muted mt-2">No senders found</p>
                                     <a href="{{ route('admin.senders.create') }}" class="btn btn-primary">
@@ -277,6 +288,35 @@ function copyToClipboard(text) {
         setTimeout(() => toast.remove(), 3000);
     }, function(err) {
         console.error('Could not copy text: ', err);
+    });
+}
+
+function testSenderApiFromList(clientId, btn) {
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+    fetch(`/admin/senders/${clientId}/test-api`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        Swal.fire({
+            icon: data.success ? 'success' : 'error',
+            title: data.success ? 'API OK' : 'API failed',
+            text: data.message || '',
+            width: 520,
+        });
+    })
+    .catch(error => Swal.fire({ icon: 'error', title: 'Test error', text: error.message }))
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = original;
     });
 }
 </script>

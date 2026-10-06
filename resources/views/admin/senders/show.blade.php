@@ -251,6 +251,9 @@
                         </button>
                     </div>
                     <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-sm btn-success" onclick="testSenderApi()">
+                            <i class="bi bi-plug me-1"></i>Test API Connection
+                        </button>
                         <button onclick="copyToClipboard('{{ $client->api_key }}')" 
                                 class="btn btn-sm btn-primary">
                             <i class="bi bi-clipboard me-1"></i>Copy API Key
@@ -762,6 +765,64 @@ function showCopyToast(message) {
     `;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
+}
+
+function testSenderApi() {
+    const btn = event?.currentTarget || event?.target;
+    const original = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Testing...';
+    }
+
+    fetch('{{ route('admin.senders.test-api', $client->id) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        const stepsHtml = (data.steps || []).map(step => {
+            const icon = step.passed
+                ? (step.warning ? '⚠️' : '✅')
+                : '❌';
+            return `<li class="mb-2 text-start"><strong>${icon} ${step.label}</strong><br><span class="text-muted small">${step.detail}</span></li>`;
+        }).join('');
+
+        const tipsHtml = (data.postman_tips || []).map(tip => `<li class="mb-1 text-start small">${tip}</li>`).join('');
+
+        Swal.fire({
+            icon: data.success ? 'success' : 'error',
+            title: data.success ? 'API connection OK' : 'API test failed',
+            html: `
+                <p class="mb-3">${data.message || ''}</p>
+                <div class="text-start">
+                    <h6 class="mb-2">Checks</h6>
+                    <ul class="list-unstyled mb-3">${stepsHtml}</ul>
+                    <h6 class="mb-2">Postman setup (share with client)</h6>
+                    <ul class="mb-0">${tipsHtml}</ul>
+                </div>
+            `,
+            width: 640,
+            confirmButtonText: 'Close',
+        });
+    })
+    .catch(error => {
+        Swal.fire({
+            icon: 'error',
+            title: 'Test error',
+            text: error.message,
+        });
+    })
+    .finally(() => {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
+    });
 }
 </script>
 @endpush

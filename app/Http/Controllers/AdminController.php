@@ -9,6 +9,7 @@ use App\Models\Campaign;
 use App\Models\Notification;
 use App\Models\WalletTransaction;
 use App\Services\OnfonWalletService;
+use App\Services\SenderApiTestService;
 use App\Services\SenderOnboardingService;
 use App\Support\CsvExporter;
 use App\Support\ListFilters;
@@ -16,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 class AdminController extends Controller
 {
     /**
@@ -333,10 +335,20 @@ class AdminController extends Controller
 
         $client = Client::findOrFail($id);
 
+        $senderRules = ['required', 'string', 'max:11'];
+        $incomingSenderId = strtoupper(trim((string) $request->input('sender_id')));
+        $currentSenderId = strtoupper(trim((string) $client->sender_id));
+
+        // Re-check uniqueness only when the sender ID is actually changing.
+        // An unchanged ID must not block balance or other field updates.
+        if ($incomingSenderId !== $currentSenderId) {
+            $senderRules[] = Rule::unique('clients', 'sender_id')->ignore($client->id);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'contact' => 'required|string|max:255',
-            'sender_id' => 'required|string|max:11|unique:clients,sender_id,' . $id,
+            'sender_id' => $senderRules,
             'balance' => 'nullable|numeric|min:0',
             'price_per_unit' => 'nullable|numeric|min:0.01',
             'status' => 'nullable|boolean',
@@ -658,6 +670,21 @@ class AdminController extends Controller
             'success' => false,
             'message' => $result['message'] ?? 'Connection failed'
         ], 400);
+    }
+
+    /**
+     * Test sender API credentials (auth + send dry run).
+     */
+    public function testApiConnection(Request $request, $id, SenderApiTestService $apiTestService)
+    {
+        if (!auth()->user()->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $client = Client::findOrFail($id);
+        $result = $apiTestService->run($client, $request->get('test_phone'));
+
+        return response()->json($result, $result['success'] ? 200 : 422);
     }
 
     /**

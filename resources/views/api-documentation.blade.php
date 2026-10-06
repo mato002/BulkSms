@@ -126,15 +126,27 @@
             <section id="authentication" class="section">
                 <h2><i class="fas fa-lock"></i> Authentication</h2>
                 
-                <p>All API requests must include your API key in the request header.</p>
+                <p>All API requests must include your API key. We accept several formats — use a <strong>header</strong> when possible (more secure than query strings).</p>
 
-                <h3>API Key Header</h3>
+                <h3>Option 1 — Header (recommended)</h3>
                 <div class="code-block">
-                    <pre>X-API-KEY: your-api-key-here</pre>
+                    <pre>X-API-Key: your-api-key-here</pre>
+                </div>
+
+                <h3>Option 2 — Query parameter</h3>
+                <p>Append the key to the URL (useful for simple GET tests; avoid in production apps):</p>
+                <div class="code-block">
+                    <pre>{{ config('app.url') }}/api/1/client/profile?api_key=your-api-key-here</pre>
+                </div>
+                <p>Accepted query names: <code>api_key</code>, <code>APIKey</code>, <code>api-key</code></p>
+
+                <h3>Option 3 — Bearer token</h3>
+                <div class="code-block">
+                    <pre>Authorization: Bearer your-api-key-here</pre>
                 </div>
 
                 <div class="alert alert-warning">
-                    <strong>Keep it secret!</strong> Never expose your API key in client-side code or public repositories. The header name is case-sensitive: use <code>X-API-KEY</code> (all caps).
+                    <strong>Keep it secret!</strong> Never expose your API key in client-side code or public repositories. Prefer the <code>X-API-Key</code> header over query parameters.
                 </div>
 
                 <h3>Client ID</h3>

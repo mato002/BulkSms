@@ -16,7 +16,7 @@ class ApiAuth
     public function handle(Request $request, Closure $next)
     {
         $startTime = microtime(true);
-        $apiKey = $request->header('X-API-Key') ?? $request->get('api_key');
+        $apiKey = $this->resolveApiKey($request);
         $client = null;
         $success = false;
         $errorMessage = null;
@@ -72,6 +72,41 @@ class ApiAuth
         return $response;
     }
 
+    private function resolveApiKey(Request $request): ?string
+    {
+        foreach (['X-API-Key', 'x-api-key', 'X-API-KEY', 'APIKey', 'Api-Key', 'api-key'] as $header) {
+            $key = $this->normalizeApiKey($request->header($header));
+            if ($key !== null) {
+                return $key;
+            }
+        }
+
+        foreach (['api_key', 'APIKey', 'api-key', 'API-Key', 'apikey'] as $param) {
+            $key = $this->normalizeApiKey($request->query($param));
+            if ($key !== null) {
+                return $key;
+            }
+        }
+
+        $authorization = $request->header('Authorization', '');
+        if (preg_match('/^Bearer\s+(.+)$/i', $authorization, $matches)) {
+            return $this->normalizeApiKey($matches[1]);
+        }
+
+        return null;
+    }
+
+    private function normalizeApiKey(mixed $key): ?string
+    {
+        if ($key === null || $key === '') {
+            return null;
+        }
+
+        $key = ltrim(trim((string) $key), ':');
+
+        return $key !== '' ? $key : null;
+    }
+
     /**
      * Log the API request
      */
@@ -93,8 +128,10 @@ class ApiAuth
             if (isset($requestBody['password'])) {
                 $requestBody['password'] = '***MASKED***';
             }
-            if (isset($requestBody['api_key'])) {
-                $requestBody['api_key'] = '***MASKED***';
+            foreach (['api_key', 'APIKey', 'api-key', 'API-Key', 'apikey'] as $credentialField) {
+                if (isset($requestBody[$credentialField])) {
+                    $requestBody[$credentialField] = '***MASKED***';
+                }
             }
             
             // Prepare headers (mask sensitive headers)

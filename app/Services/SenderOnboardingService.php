@@ -116,13 +116,16 @@ class SenderOnboardingService
         $baseUrl = rtrim(config('app.url'), '/');
 
         return <<<CURL
-curl -X POST {$baseUrl}/api/{$client->id}/sms/send \\
+curl -X POST {$baseUrl}/api/{$client->id}/messages/send \\
   -H "X-API-Key: {$client->api_key}" \\
   -H "Content-Type: application/json" \\
   -d '{
+    "client_id": {$client->id},
+    "channel": "sms",
     "recipient": "254712345678",
-    "message": "Hello from {$client->sender_id}!",
-    "sender": "{$client->sender_id}"
+    "sender": "{$client->sender_id}",
+    "body": "Hello from {$client->sender_id}!",
+    "dry_run": true
   }'
 CURL;
     }
