@@ -15,7 +15,7 @@
                         <section class="mb-5">
                             <h2 class="h4 mb-3">1. Introduction</h2>
                             <p>
-                                BulkSMS by Matech Technologies ("we", "our", or "us") is committed to protecting your privacy. 
+                                BulkSMS by Prady Technologies ("we", "our", or "us") is committed to protecting your privacy.
                                 This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use 
                                 our SMS platform and services.
                             </p>
@@ -127,7 +127,7 @@
                             <ul class="list-unstyled">
                                 <li><i class="fas fa-envelope me-2"></i> Email: support@matechtechnologies.com</li>
                                 <li><i class="fas fa-phone me-2"></i> Phone: +254 728 883 160</li>
-                                <li><i class="fas fa-building me-2"></i> Matech Technologies</li>
+                                <li><i class="fas fa-building me-2"></i> Prady Technologies</li>
                             </ul>
                         </section>
                     </div>

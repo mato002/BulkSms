@@ -1346,7 +1346,7 @@
         <!-- Footer -->
         <footer class="main-footer">
             <div class="footer-content">
-                <p class="footer-text">&copy; {{ date('Y') }} BulkSms by Matech Technologies. All rights reserved.</p>
+                <p class="footer-text">&copy; {{ date('Y') }} BulkSms by Prady Technologies. All rights reserved.</p>
                 <div class="footer-links">
                     <a href="{{ route('documentation') }}">Documentation</a>
                     <a href="{{ route('support') }}">Support</a>

@@ -2094,7 +2094,7 @@
         </div>
         <div class="footer-bottom">
             <div class="footer-bottom-content">
-                <p>&copy; {{ date('Y') }} BulkSMS CRM by Matech Technologies. All rights reserved.</p>
+                <p>&copy; {{ date('Y') }} BulkSMS CRM by Prady Technologies. All rights reserved.</p>
                 <div class="footer-badges">
                     <span class="badge"><i class="fas fa-shield-alt"></i> Secure</span>
                     <span class="badge"><i class="fas fa-bolt"></i> Fast</span>

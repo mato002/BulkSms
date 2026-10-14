@@ -83,7 +83,7 @@ class AuthController extends Controller
                 return redirect()->route('tenant.dashboard');
             }
 
-            return redirect()->intended('/');
+            return redirect()->route('dashboard');
         }
 
         // Security notification: failed login attempt

@@ -15,7 +15,7 @@
                         <section class="mb-5">
                             <h2 class="h4 mb-3">1. Acceptance of Terms</h2>
                             <p>
-                                By accessing and using BulkSMS by Matech Technologies ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. 
+                                By accessing and using BulkSMS by Prady Technologies ("the Service"), you accept and agree to be bound by the terms and provision of this agreement.
                                 If you do not agree to these Terms of Service, please do not use our Service.
                             </p>
                         </section>
@@ -87,7 +87,7 @@
                         <section class="mb-5">
                             <h2 class="h4 mb-3">8. Intellectual Property</h2>
                             <p>
-                                The Service, including its original content, features, and functionality, is owned by Matech Technologies and is protected by international copyright, 
+                                The Service, including its original content, features, and functionality, is owned by Prady Technologies and is protected by international copyright,
                                 trademark, patent, trade secret, and other intellectual property laws.
                             </p>
                         </section>
@@ -103,7 +103,7 @@
                         <section class="mb-5">
                             <h2 class="h4 mb-3">10. Limitation of Liability</h2>
                             <p>
-                                To the maximum extent permitted by law, Matech Technologies shall not be liable for any indirect, incidental, special, consequential, or punitive damages, 
+                                To the maximum extent permitted by law, Prady Technologies shall not be liable for any indirect, incidental, special, consequential, or punitive damages,
                                 or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses.
                             </p>
                         </section>
@@ -111,7 +111,7 @@
                         <section class="mb-5">
                             <h2 class="h4 mb-3">11. Indemnification</h2>
                             <p>
-                                You agree to indemnify and hold harmless Matech Technologies from any claims, damages, losses, liabilities, and expenses (including legal fees) 
+                                You agree to indemnify and hold harmless Prady Technologies from any claims, damages, losses, liabilities, and expenses (including legal fees)
                                 arising out of your use of the Service or violation of these Terms.
                             </p>
                         </section>
@@ -137,7 +137,7 @@
                             <ul class="list-unstyled">
                                 <li><i class="fas fa-envelope me-2"></i> Email: support@matechtechnologies.com</li>
                                 <li><i class="fas fa-phone me-2"></i> Phone: +254 728 883 160</li>
-                                <li><i class="fas fa-building me-2"></i> Matech Technologies</li>
+                                <li><i class="fas fa-building me-2"></i> Prady Technologies</li>
                             </ul>
                         </section>
                     </div>
